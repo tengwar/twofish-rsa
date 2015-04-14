@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+
+<VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <MenuBar>
+        <menus>
+          <Menu mnemonicParsing="false" text="Plik">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Close" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Klucze">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Add" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Pomoc">
+            <items>
+              <MenuItem mnemonicParsing="false" text="About" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+      <TabPane tabClosingPolicy="UNAVAILABLE">
+        <tabs>
+          <Tab text="Szyfrowanie">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0">
+                     <children>
+                        <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                           <children>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <Label text="Plik do zaszyfrowania">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </TextField>
+                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <Label text="Plik wyjściowy">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </TextField>
+                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT">
+                                 <children>
+                                    <Label text="Tryb pracy">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <ChoiceBox>
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ChoiceBox>
+                                    <Label text="Długość klucza">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <ChoiceBox>
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ChoiceBox>
+                                    <Label text="Długość podbloku">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <ChoiceBox disable="true">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ChoiceBox>
+                                 </children>
+                              </HBox>
+                              <Label text="Odbiorcy:">
+                                 <VBox.margin>
+                                    <Insets left="5.0" right="5.0" top="5.0" />
+                                 </VBox.margin>
+                              </Label>
+                              <HBox alignment="CENTER_LEFT">
+                                 <children>
+                                    <ListView HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ListView>
+                                    <VBox alignment="TOP_CENTER" HBox.hgrow="SOMETIMES">
+                                       <children>
+                                          <Button mnemonicParsing="false" text="+">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                          <Button minWidth="25.0" mnemonicParsing="false" text="-">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                       </children>
+                                    </VBox>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_RIGHT">
+                                 <children>
+                                    <ProgressBar maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                    <Button mnemonicParsing="false" text="Szyfruj">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                           </children>
+                        </VBox>
+                     </children>
+                  </AnchorPane>
+            </content>
+          </Tab>
+          <Tab text="Deszyfrowanie">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <VBox prefHeight="346.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                           <children>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <Label text="Plik do zdeszyfrowania">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </TextField>
+                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <Label text="Plik wyjściowy">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </TextField>
+                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                              <Label text="Odbiorcy:">
+                                 <VBox.margin>
+                                    <Insets left="5.0" right="5.0" top="5.0" />
+                                 </VBox.margin>
+                              </Label>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <ListView HBox.hgrow="SOMETIMES">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ListView>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER">
+                                 <children>
+                                    <Label text="Hasło do klucza prywatnego">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <PasswordField HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </PasswordField>
+                                    <Button mnemonicParsing="false" text="Pokaż hasło">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_RIGHT" minHeight="35.0">
+                                 <children>
+                                    <ProgressBar maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                    <Button mnemonicParsing="false" text="Deszyfruj">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                              </HBox>
+                           </children>
+                        </VBox>
+                     </children>
+                  </AnchorPane>
+            </content>
+          </Tab>
+        </tabs>
+      </TabPane>
+   </children>
+</VBox>
