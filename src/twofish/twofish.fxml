@@ -5,7 +5,7 @@
 <?import java.lang.*?>
 <?import javafx.scene.control.*?>
 
-<VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="twofish.Controller">
    <children>
       <MenuBar>
         <menus>
@@ -46,7 +46,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="selectFileToEncryptButton" mnemonicParsing="false" onAction="#printText" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -65,7 +65,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="whereToSaveEncryptedFileButton" mnemonicParsing="false" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -120,12 +120,12 @@
                                     </ListView>
                                     <VBox alignment="TOP_CENTER" HBox.hgrow="SOMETIMES">
                                        <children>
-                                          <Button mnemonicParsing="false" text="+">
+                                          <Button fx:id="addRecipientButton" mnemonicParsing="false" text="+">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button minWidth="25.0" mnemonicParsing="false" text="-">
+                                          <Button fx:id="removeRecipientButton" minWidth="25.0" mnemonicParsing="false" text="-">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
@@ -136,12 +136,12 @@
                               </HBox>
                               <HBox alignment="CENTER_RIGHT">
                                  <children>
-                                    <ProgressBar maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
+                                    <ProgressBar fx:id="encryptionProgressBar" maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button mnemonicParsing="false" text="Szyfruj">
+                                    <Button fx:id="encryptButton" mnemonicParsing="false" text="Szyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -172,7 +172,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="selectFileToDecryptButton" mnemonicParsing="false" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -191,7 +191,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="whereToSaveDecryptedFileButton" mnemonicParsing="false" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -224,7 +224,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </PasswordField>
-                                    <Button mnemonicParsing="false" text="Pokaż hasło">
+                                    <Button fx:id="showPasswordButton" mnemonicParsing="false" text="Pokaż hasło">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -233,12 +233,12 @@
                               </HBox>
                               <HBox alignment="CENTER_RIGHT" minHeight="35.0">
                                  <children>
-                                    <ProgressBar maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
+                                    <ProgressBar fx:id="decryptionProgressBar" maxWidth="1.7976931348623157E308" progress="0.0" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button mnemonicParsing="false" text="Deszyfruj">
+                                    <Button fx:id="decryptButton" mnemonicParsing="false" text="Deszyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
