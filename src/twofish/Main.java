@@ -13,6 +13,7 @@ public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) throws Exception{
 		Security.addProvider(new BouncyCastleProvider());
+		Utils.checkMaxKeyLength("Twofish");
 
 		Parent root = FXMLLoader.load(getClass().getResource("twofish.fxml"));
 		primaryStage.setTitle("Twofish");

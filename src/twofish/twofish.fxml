@@ -41,7 +41,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <TextField HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="selectFileToEncryptTextField" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -60,7 +60,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <TextField HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="whereToSaveEncryptedFileTextField" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -79,7 +79,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <ChoiceBox>
+                                    <ChoiceBox fx:id="operationModeChoiceBox">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -89,7 +89,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <ChoiceBox>
+                                    <ChoiceBox fx:id="keyLengthChoiceBox">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -99,7 +99,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <ChoiceBox disable="true">
+                                    <ChoiceBox fx:id="subblockLengthChoiceBox" disable="true">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -113,7 +113,7 @@
                               </Label>
                               <HBox alignment="CENTER_LEFT">
                                  <children>
-                                    <ListView HBox.hgrow="ALWAYS">
+                                    <ListView fx:id="editRecipientsListView" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -141,7 +141,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button fx:id="encryptButton" mnemonicParsing="false" text="Szyfruj">
+                                    <Button fx:id="encryptButton" mnemonicParsing="false" onAction="#encrypt" text="Szyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -167,7 +167,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <TextField HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="selectFileToDecryptTextField" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -186,7 +186,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <TextField HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="whereToSaveDecryptedFileTextField" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -205,7 +205,7 @@
                               </Label>
                               <HBox alignment="CENTER">
                                  <children>
-                                    <ListView HBox.hgrow="SOMETIMES">
+                                    <ListView fx:id="recipientsListView" HBox.hgrow="SOMETIMES">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -219,7 +219,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <PasswordField HBox.hgrow="ALWAYS">
+                                    <PasswordField fx:id="passwordField" HBox.hgrow="ALWAYS">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -238,7 +238,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button fx:id="decryptButton" mnemonicParsing="false" text="Deszyfruj">
+                                    <Button fx:id="decryptButton" mnemonicParsing="false" onAction="#decrypt" text="Deszyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
