@@ -1,22 +1,33 @@
 package twofish;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.ResourceBundle;
 
-public class Controller {
-
-	private SecretKey key = null;
+public class Controller implements Initializable{
+	ObservableList<String> encryptionEmails = FXCollections.observableArrayList();
+	ObservableList<String> decryptionEmails = FXCollections.observableArrayList();
+	private Stage stage;
 
 	// encryption
 	@FXML
@@ -34,7 +45,7 @@ public class Controller {
 	@FXML
 	private ChoiceBox subblockLengthChoiceBox;
 	@FXML
-	private ListView editRecipientsListView;
+	private ListView<String> editRecipientsListView;
 	@FXML
 	private Button addRecipientButton;
 	@FXML
@@ -54,7 +65,7 @@ public class Controller {
 	@FXML
 	private Button whereToSaveDecryptedFileButton;
 	@FXML
-	private ListView recipientsListView;
+	private ListView<String> recipientsListView;
 	@FXML
 	private PasswordField passwordField;
 	@FXML
@@ -71,11 +82,11 @@ public class Controller {
 
 	@FXML
 	void createRSAKeys() {
-		Utils.generateRSAKeypair("D:\\key.pub", "D:\\key");
+		Utils.generateRSAKeypair("klucze\\key.pub", "klucze\\key");
 	}
 
 	@FXML
-	void encrypt2() {
+	void encrypt() {
 		try {
 			// read plain
 			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
@@ -83,7 +94,7 @@ public class Controller {
 
 			// write encrypted
 			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			byte[] encryptedData = Utils.encrypt(plainData);
+			byte[] encryptedData = Utils.encrypt(plainData, encryptionEmails);
 
 			// write encrypted
 			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
@@ -100,7 +111,7 @@ public class Controller {
 	}
 
 	@FXML
-	void decrypt2() {
+	void decrypt() {
 		try {
 			// read encrypted
 			Path encryptedFile = Paths.get(selectFileToDecryptTextField.getText());
@@ -123,66 +134,34 @@ public class Controller {
 	}
 
 	@FXML
-	void decrypt(){
-		if (key != null) {
-			try {
-				// read encrypted
-				Path encryptedFile = Paths.get(selectFileToDecryptTextField.getText());
-				byte[] dataToDecrypt = Files.readAllBytes(encryptedFile);
-
-				// decrypt
-				byte[] decryptedData = Utils.twofishDecrypt(dataToDecrypt, key);
-
-				// write decrypted
-				Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
-				Path decryptedFile = Files.createFile(Paths.get(whereToSaveDecryptedFileTextField.getText()));
-				Files.write(decryptedFile, decryptedData);
-			} catch (NoSuchAlgorithmException e) {
-				System.out.println("Twofish algorithm is not supported, install BouncyCastle.");
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-			} catch (BadPaddingException e) {
-				e.printStackTrace();
-			} catch (NoSuchPaddingException e) {
-				System.out.println("Selected padding is not supported.");
-			} catch (IllegalBlockSizeException e) {
-				e.printStackTrace();
+	void addRecipient() {
+		FileChooser chooser = new FileChooser();
+		chooser.setTitle("Wybierz klucz publiczny adresata");
+		chooser.setInitialDirectory(new File("klucze"));
+		chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Public key", "*.pub"));
+		List<File> files = chooser.showOpenMultipleDialog(stage);
+		if (files != null) {
+			for (File file : files) {
+				String name = file.getName();
+				StringBuilder sb = new StringBuilder(name);
+				sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
+				encryptionEmails.add(sb.toString()); // TODO prevent duplicates
 			}
-		} else {
-			System.out.println("Select a key first.");
 		}
-
 	}
 
-	@FXML
-	void encrypt(){
-		try {
-			// read plain
-			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
-			byte[] plainData = Files.readAllBytes(plainFile);
-			key = Utils.generateKey(); // TODO proper saving
+//	@FXML
+//	void removeRecipient() {
+//		recipientsListView.getSelectionModel()
+//	}
 
-			// encrypt
-			byte[] encryptedData = Utils.twofishEncrypt(plainData, key);
+	@Override
+	public void initialize(URL location, ResourceBundle resources) {
+		editRecipientsListView.setItems(encryptionEmails);
+		recipientsListView.setItems(decryptionEmails);
+	}
 
-			// write encrypted
-			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			Path encryptedFile = Files.createFile(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			Files.write(encryptedFile, encryptedData);
-		} catch (NoSuchAlgorithmException e) {
-			System.out.println("Twofish algorithm is not supported, install BouncyCastle.");
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			e.printStackTrace();
-		} catch (BadPaddingException e) {
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			System.out.println("Selected padding is not supported.");
-		} catch (IllegalBlockSizeException e) {
-			e.printStackTrace();
-		}
+	public void setStage(Stage stage) {
+		this.stage = stage;
 	}
 }

@@ -5,6 +5,14 @@ package twofish;
  */
 
 import javafx.scene.control.Alert;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+import org.bouncycastle.util.io.pem.PemWriter;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
@@ -19,7 +27,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.security.*;
-import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
@@ -27,18 +34,10 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
-
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
-import org.bouncycastle.util.io.pem.PemWriter;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
+import java.util.List;
 
 public class Utils {
-	public static byte[] encrypt(byte[] data) {
+	public static byte[] encrypt(byte[] data, List<String> emails) {
 		byte[] file = null;
 		try {
 			// generate key
@@ -87,20 +86,22 @@ public class Utils {
 			Element users = doc.createElement("ApprovedUsers");
 			root.appendChild(users);
 
-			// user TODO use actual users
-			Element user = doc.createElement("User");
-			users.appendChild(user);
-			Element email = doc.createElement("Email");
-			email.appendChild(doc.createTextNode("key")); // TODO use real value
-			user.appendChild(email);
-				// encrypt session key
-				RSAPublicKey pubkey = loadPublicKey("D:\\" + "key" + ".pub"); // TODO see if this naming scheme is OK
-				Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
-				rsa.init(Cipher.ENCRYPT_MODE, pubkey);
-				byte[] key = rsa.doFinal(sessionKey.getEncoded());
-			Element encryptedKey = doc.createElement("SessionKey");
-			encryptedKey.appendChild(doc.createTextNode( Base64.getEncoder().encodeToString(key) ));
-			user.appendChild(encryptedKey);
+			// users TODO use actual users
+			for (String email : emails) {
+				Element user = doc.createElement("User");
+				users.appendChild(user);
+				Element emailNode = doc.createElement("Email");
+				emailNode.appendChild(doc.createTextNode(email));
+				user.appendChild(emailNode);
+					// encrypt session key
+					RSAPublicKey pubkey = loadPublicKey("klucze" + File.separator + email + ".pub"); // TODO see if this naming scheme is OK
+					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+					rsa.init(Cipher.ENCRYPT_MODE, pubkey);
+					byte[] key = rsa.doFinal(sessionKey.getEncoded());
+				Element encryptedKey = doc.createElement("SessionKey");
+				encryptedKey.appendChild(doc.createTextNode( Base64.getEncoder().encodeToString(key) ));
+				user.appendChild(encryptedKey);
+			}
 
 			// write the XML
 			Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -146,7 +147,7 @@ public class Utils {
 		return file;
 	}
 
-	public static byte[] decrypt(byte[] data) {
+	public static byte[] decrypt(byte[] data/*, String email*/) {
 		byte[] decrypted = null;
 		try {
 			// split encrypted file into header and data
@@ -176,16 +177,17 @@ public class Utils {
 
 				if (n.getNodeType() == Node.ELEMENT_NODE) {
 					Element e = (Element) n;
-					String email = e.getElementsByTagName("Email").item(0).getFirstChild().getNodeValue();
+					String recipientEmail = e.getElementsByTagName("Email").item(0).getFirstChild().getNodeValue();
 					String keyString = e.getElementsByTagName("SessionKey").item(0).getFirstChild().getNodeValue();
 					byte[] encryptedKey = Base64.getDecoder().decode(keyString);
 
 					// decrypt session key
-					RSAPrivateKey privkey = loadPrivateKey("D:\\" + email); // TODO see if key name is OK
+					RSAPrivateKey privkey = loadPrivateKey("klucze" + File.separator + recipientEmail); // TODO see if key name is OK
 					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
 					rsa.init(Cipher.DECRYPT_MODE, privkey);
 					byte[] key = rsa.doFinal(encryptedKey);
 					sessionKey = new SecretKeySpec(key, "Twofish");
+					break; // TODO actually find the correct user
 				}
 			}
 			if (sessionKey == null) {

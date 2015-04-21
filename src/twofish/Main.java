@@ -5,15 +5,13 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-import java.security.Provider;
-import java.security.Security;
-import java.util.Arrays;
-import java.util.Base64;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.Security;
 
 public class Main extends Application {
 
@@ -21,6 +19,14 @@ public class Main extends Application {
 	public void start(Stage primaryStage) throws Exception{
 		Security.addProvider(new BouncyCastleProvider());
 		Utils.checkMaxKeyLength("Twofish");
+
+		Path klucze = Paths.get("klucze");
+		try {
+			if (Files.notExists(klucze))
+				Files.createDirectory(klucze);
+		} catch (IOException|SecurityException e) {
+			System.out.println("Directory klucze is needed by this app.");
+		}
 
 //		for (Provider provider : Security.getProviders()) {
 //			System.out.println(provider.getName());
@@ -57,8 +63,9 @@ public class Main extends Application {
 //		System.out.println(Base64.getEncoder().encodeToString(key2.getEncoded()));
 //		System.out.println();
 //		System.out.println(Base64.getEncoder().encodeToString(key3.getEncoded()));
-
-		Parent root = FXMLLoader.load(getClass().getResource("twofish.fxml"));
+		final FXMLLoader loader = new FXMLLoader(getClass().getResource("twofish.fxml"));
+		final Parent root = (Parent) loader.load();
+		((Controller) loader.getController()).setStage(primaryStage);
 		primaryStage.setTitle("Twofish");
 		primaryStage.setScene(new Scene(root));
 		primaryStage.show();
