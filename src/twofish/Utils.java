@@ -17,16 +17,20 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.io.*;
+import java.security.*;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+import org.bouncycastle.util.io.pem.PemWriter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -38,11 +42,11 @@ public class Utils {
 		byte[] file = null;
 		try {
 			// generate key
-			SecretKey key = generateKey();
+			SecretKey sessionKey = generateKey();
 
 			// prepare cipher
 			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, key);
+			cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
 			// encrypt
 			byte[] encrypted = cipher.doFinal(data);
@@ -62,7 +66,7 @@ public class Utils {
 
 			// key size
 			Element keysize = doc.createElement("KeySize");
-			keysize.appendChild(doc.createTextNode(String.valueOf(key.getEncoded().length * 8)));
+			keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
 			root.appendChild(keysize);
 
 			// TODO subblock size
@@ -87,10 +91,15 @@ public class Utils {
 			Element user = doc.createElement("User");
 			users.appendChild(user);
 			Element email = doc.createElement("Email");
-			email.appendChild(doc.createTextNode("mail@mail.ma")); // TODO use real value
+			email.appendChild(doc.createTextNode("key")); // TODO use real value
 			user.appendChild(email);
+				// encrypt session key
+				RSAPublicKey pubkey = loadPublicKey("D:\\" + "key" + ".pub"); // TODO see if this naming scheme is OK
+				Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+				rsa.init(Cipher.ENCRYPT_MODE, pubkey);
+				byte[] key = rsa.doFinal(sessionKey.getEncoded());
 			Element encryptedKey = doc.createElement("SessionKey");
-			encryptedKey.appendChild(doc.createTextNode( Base64.getEncoder().encodeToString(key.getEncoded()) )); // TODO encrypt key
+			encryptedKey.appendChild(doc.createTextNode( Base64.getEncoder().encodeToString(key) ));
 			user.appendChild(encryptedKey);
 
 			// write the XML
@@ -128,6 +137,10 @@ public class Utils {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
 		} catch (IOException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "ByteArrayOutputStream IO exception. Shouldn't happen.");
+		} catch (InvalidKeySpecException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
+		} catch (NoSuchProviderException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
 		}
 
 		return file;
@@ -156,7 +169,7 @@ public class Utils {
 			doc.getDocumentElement().normalize();
 
 			// get keys nad mails
-			SecretKey key = null; // TODO have a list of keys and mails
+			SecretKey sessionKey = null; // TODO have a list of keys and mails
 			NodeList users = doc.getElementsByTagName("User");
 			for (int i = 0; i < users.getLength(); i++) {
 				Node n = users.item(i);
@@ -165,17 +178,23 @@ public class Utils {
 					Element e = (Element) n;
 					String email = e.getElementsByTagName("Email").item(0).getFirstChild().getNodeValue();
 					String keyString = e.getElementsByTagName("SessionKey").item(0).getFirstChild().getNodeValue();
-					byte[] keyData = Base64.getDecoder().decode(keyString);
-					key = new SecretKeySpec(keyData, "Twofish");
+					byte[] encryptedKey = Base64.getDecoder().decode(keyString);
+
+					// decrypt session key
+					RSAPrivateKey privkey = loadPrivateKey("D:\\" + email); // TODO see if key name is OK
+					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+					rsa.init(Cipher.DECRYPT_MODE, privkey);
+					byte[] key = rsa.doFinal(encryptedKey);
+					sessionKey = new SecretKeySpec(key, "Twofish");
 				}
 			}
-			if (key == null) {
+			if (sessionKey == null) {
 				Alert alert = new Alert(Alert.AlertType.WARNING, "Key cannot be read.");
 			}
 
 			// prepare cipher
 			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
-			cipher.init(Cipher.DECRYPT_MODE, key);
+			cipher.init(Cipher.DECRYPT_MODE, sessionKey);
 
 			// decrypt
 			decrypted = cipher.doFinal(encryptedData);
@@ -196,9 +215,59 @@ public class Utils {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+		} catch (InvalidKeySpecException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
+		} catch (NoSuchProviderException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
 		}
 
 		return decrypted;
+	}
+
+	public static void generateRSAKeypair(String pubFilename, String privFilename) {
+		KeyPairGenerator generator = null;
+		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename)));
+				PemWriter privWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(privFilename))) ) {
+			// set up generator
+			generator = KeyPairGenerator.getInstance("RSA", "BC");
+			generator.initialize(2048);
+
+			// generate keys
+			KeyPair keyPair = generator.generateKeyPair();
+			RSAPrivateKey priv = (RSAPrivateKey) keyPair.getPrivate();
+			RSAPublicKey pub = (RSAPublicKey) keyPair.getPublic();
+
+			// write the keys
+			pubWriter.writeObject(new PemObject("RSA PUBLIC KEY", pub.getEncoded()));
+			privWriter.writeObject(new PemObject("RSA PRIVATE KEY", priv.getEncoded()));
+
+		} catch (NoSuchAlgorithmException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA is not supported. Install Bouncy Castle.");
+		} catch (NoSuchProviderException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Bouncy Castle provider not found. Install Bouncy Castle.");
+		} catch (FileNotFoundException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename + "\" not found.");
+		} catch (IOException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"\" + pubFilename + \"\\\" or \\\"\" + privFilename + \"\" file.");
+		}
+	}
+
+	public static RSAPublicKey loadPublicKey(String filename) throws IOException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException {
+		PemReader reader = new PemReader(new FileReader(filename));
+		PemObject obj = reader.readPemObject();
+		byte[] data = obj.getContent();
+		X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(data);
+		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+		return (RSAPublicKey) factory.generatePublic(pubKeySpec);
+	}
+
+	public static RSAPrivateKey loadPrivateKey(String filename) throws IOException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException {
+		PemReader reader = new PemReader(new FileReader(filename));
+		PemObject obj = reader.readPemObject();
+		byte[] data = obj.getContent();
+		PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(data);
+		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+		return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
 	}
 
 	public static byte[] twofishEncrypt(byte[] data, SecretKey key) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {

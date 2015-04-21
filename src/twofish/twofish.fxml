@@ -16,7 +16,7 @@
           </Menu>
           <Menu mnemonicParsing="false" text="Klucze">
             <items>
-              <MenuItem mnemonicParsing="false" text="Add" />
+              <MenuItem mnemonicParsing="false" onAction="#createRSAKeys" text="Add" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Pomoc">

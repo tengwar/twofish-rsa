@@ -70,33 +70,8 @@ public class Controller {
 	}
 
 	@FXML
-	void encrypt(){
-		try {
-			// read plain
-			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
-			byte[] plainData = Files.readAllBytes(plainFile);
-			key = Utils.generateKey(); // TODO proper saving
-
-			// encrypt
-			byte[] encryptedData = Utils.twofishEncrypt(plainData, key);
-
-			// write encrypted
-			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			Path encryptedFile = Files.createFile(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			Files.write(encryptedFile, encryptedData);
-		} catch (NoSuchAlgorithmException e) {
-			System.out.println("Twofish algorithm is not supported, install BouncyCastle.");
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			e.printStackTrace();
-		} catch (BadPaddingException e) {
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			System.out.println("Selected padding is not supported.");
-		} catch (IllegalBlockSizeException e) {
-			e.printStackTrace();
-		}
+	void createRSAKeys() {
+		Utils.generateRSAKeypair("D:\\key.pub", "D:\\key");
 	}
 
 	@FXML
@@ -179,5 +154,35 @@ public class Controller {
 			System.out.println("Select a key first.");
 		}
 
+	}
+
+	@FXML
+	void encrypt(){
+		try {
+			// read plain
+			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
+			byte[] plainData = Files.readAllBytes(plainFile);
+			key = Utils.generateKey(); // TODO proper saving
+
+			// encrypt
+			byte[] encryptedData = Utils.twofishEncrypt(plainData, key);
+
+			// write encrypted
+			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			Path encryptedFile = Files.createFile(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			Files.write(encryptedFile, encryptedData);
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("Twofish algorithm is not supported, install BouncyCastle.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			System.out.println("Selected padding is not supported.");
+		} catch (IllegalBlockSizeException e) {
+			e.printStackTrace();
+		}
 	}
 }
