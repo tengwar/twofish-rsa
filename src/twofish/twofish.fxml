@@ -141,7 +141,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button fx:id="encryptButton" mnemonicParsing="false" onAction="#encrypt" text="Szyfruj">
+                                    <Button fx:id="encryptButton" mnemonicParsing="false" onAction="#encrypt2" text="Szyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -238,7 +238,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </ProgressBar>
-                                    <Button fx:id="decryptButton" mnemonicParsing="false" onAction="#decrypt" text="Deszyfruj">
+                                    <Button fx:id="decryptButton" mnemonicParsing="false" onAction="#decrypt2" text="Deszyfruj">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>

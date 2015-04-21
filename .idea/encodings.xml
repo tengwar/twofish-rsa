@@ -4,5 +4,6 @@
     <file url="file://$PROJECT_DIR$/.gitignore" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/twofish/Controller.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/twofish/Main.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/twofish/Utils.java" charset="UTF-8" />
   </component>
 </project>

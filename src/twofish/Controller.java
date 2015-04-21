@@ -75,7 +75,7 @@ public class Controller {
 			// read plain
 			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
 			byte[] plainData = Files.readAllBytes(plainFile);
-			key = Utils.generateKey(); // TODO proper key generation and saving
+			key = Utils.generateKey(); // TODO proper saving
 
 			// encrypt
 			byte[] encryptedData = Utils.twofishEncrypt(plainData, key);
@@ -96,6 +96,54 @@ public class Controller {
 			System.out.println("Selected padding is not supported.");
 		} catch (IllegalBlockSizeException e) {
 			e.printStackTrace();
+		}
+	}
+
+	@FXML
+	void encrypt2() {
+		try {
+			// read plain
+			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
+			byte[] plainData = Files.readAllBytes(plainFile);
+
+			// write encrypted
+			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			byte[] encryptedData = Utils.encrypt(plainData);
+
+			// write encrypted
+			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			Path encryptedFile = Files.createFile(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			if (encryptedFile != null && encryptedData != null) {
+				Files.write(encryptedFile, encryptedData);
+			} else {
+				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot encrypt file.");
+			}
+
+		} catch (IOException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot write file.");
+		}
+	}
+
+	@FXML
+	void decrypt2() {
+		try {
+			// read encrypted
+			Path encryptedFile = Paths.get(selectFileToDecryptTextField.getText());
+			byte[] dataToDecrypt = Files.readAllBytes(encryptedFile);
+
+			// decrypt
+			byte[] decryptedData = Utils.decrypt(dataToDecrypt);
+
+			// write decrypted
+			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
+			Path decryptedFile = Files.createFile(Paths.get(whereToSaveDecryptedFileTextField.getText()));
+			if (decryptedFile != null && decryptedData != null) {
+				Files.write(decryptedFile, decryptedData);
+			} else {
+				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.");
+			}
+		} catch (IOException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read file.");
 		}
 	}
 
