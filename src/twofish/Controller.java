@@ -4,29 +4,29 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.xml.sax.SAXException;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable{
-	ObservableList<String> encryptionEmails = FXCollections.observableArrayList();
-	ObservableList<String> decryptionEmails = FXCollections.observableArrayList();
+	ObservableList<User> encryptionRecipients = FXCollections.observableArrayList();
+	ObservableList<User> decryptionRecipients = FXCollections.observableArrayList();
 	private Stage stage;
 
 	// encryption
@@ -45,7 +45,7 @@ public class Controller implements Initializable{
 	@FXML
 	private ChoiceBox subblockLengthChoiceBox;
 	@FXML
-	private ListView<String> editRecipientsListView;
+	private ListView<User> editRecipientsListView;
 	@FXML
 	private Button addRecipientButton;
 	@FXML
@@ -65,7 +65,7 @@ public class Controller implements Initializable{
 	@FXML
 	private Button whereToSaveDecryptedFileButton;
 	@FXML
-	private ListView<String> recipientsListView;
+	private ListView<User> recipientsListView;
 	@FXML
 	private PasswordField passwordField;
 	@FXML
@@ -94,7 +94,7 @@ public class Controller implements Initializable{
 
 			// write encrypted
 			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			byte[] encryptedData = Utils.encrypt(plainData, encryptionEmails);
+			byte[] encryptedData = Utils.encrypt(plainData, encryptionRecipients);
 
 			// write encrypted
 			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
@@ -115,10 +115,29 @@ public class Controller implements Initializable{
 		try {
 			// read encrypted
 			Path encryptedFile = Paths.get(selectFileToDecryptTextField.getText());
-			byte[] dataToDecrypt = Files.readAllBytes(encryptedFile);
+			byte[] data = Files.readAllBytes(encryptedFile);
+
+			// split encrypted file into header and data
+			byte[] header = null;
+			byte[] encryptedData = null;
+			for (int i = 0; i < data.length; i++) {
+				if (data[i] == 0) {
+					header = Arrays.copyOfRange(data, 0, i);
+					encryptedData = Arrays.copyOfRange(data, i + 1, data.length);
+					break;
+				}
+			}
+			if (header == null || encryptedData == null) {
+				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.");
+			}
+
+			// process header TODO separate it from decryption and load on file selected
+			List<User> users = Utils.parseHeader(header);
+			decryptionRecipients.addAll(users);
 
 			// decrypt
-			byte[] decryptedData = Utils.decrypt(dataToDecrypt);
+			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + users.get(0).name); // TODO see if key name is OK
+			byte[] decryptedData = Utils.decrypt(encryptedData, users.get(0).encryptedKey, privkey);
 
 			// write decrypted
 			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
@@ -130,24 +149,47 @@ public class Controller implements Initializable{
 			}
 		} catch (IOException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read file.");
+		} catch (ParserConfigurationException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.");
+		} catch (SAXException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "XML SAX exception.");
+		} catch (NoSuchAlgorithmException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.");
+		} catch (NoSuchProviderException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
+		} catch (InvalidKeySpecException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
 		}
 	}
 
 	@FXML
 	void addRecipient() {
-		FileChooser chooser = new FileChooser();
-		chooser.setTitle("Wybierz klucz publiczny adresata");
-		chooser.setInitialDirectory(new File("klucze"));
-		chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Public key", "*.pub"));
-		List<File> files = chooser.showOpenMultipleDialog(stage);
-		if (files != null) {
-			for (File file : files) {
-				String name = file.getName();
-				StringBuilder sb = new StringBuilder(name);
-				sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
-				encryptionEmails.add(sb.toString()); // TODO prevent duplicates
+		try {
+			FileChooser chooser = new FileChooser();
+			chooser.setTitle("Wybierz klucz publiczny adresata");
+			chooser.setInitialDirectory(new File("klucze"));
+			chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Public key", "*.pub"));
+			List<File> files = chooser.showOpenMultipleDialog(stage);
+			if (files != null) {
+				for (File file : files) {
+					String name = file.getName();
+					StringBuilder sb = new StringBuilder(name);
+					sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
+					User user = new User(sb.toString());
+					user.pubkey = Utils.loadPublicKey(file.getCanonicalPath());
+					encryptionRecipients.add(user); // TODO prevent duplicates
+				}
 			}
+		} catch (NoSuchAlgorithmException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.");
+		} catch (InvalidKeySpecException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
+		} catch (NoSuchProviderException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
+		} catch (IOException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read the public key.");
 		}
+
 	}
 
 //	@FXML
@@ -157,8 +199,8 @@ public class Controller implements Initializable{
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		editRecipientsListView.setItems(encryptionEmails);
-		recipientsListView.setItems(decryptionEmails);
+		editRecipientsListView.setItems(encryptionRecipients);
+		recipientsListView.setItems(decryptionRecipients);
 	}
 
 	public void setStage(Stage stage) {
