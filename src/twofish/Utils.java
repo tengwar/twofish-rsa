@@ -58,24 +58,24 @@ public class Utils {
 			Element root = doc.createElement("EncryptedFileHeader");
 			doc.appendChild(root);
 
-			// algorithm
+			// algorithm node
 			Element algorithm = doc.createElement("Algorithm");
 			algorithm.appendChild(doc.createTextNode("Twofish"));
 			root.appendChild(algorithm);
 
-			// key size
+			// key size node
 			Element keysize = doc.createElement("KeySize");
 			keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
 			root.appendChild(keysize);
 
 			// TODO subblock size
 
-			// cipher mode
+			// cipher mode node
 			Element mode = doc.createElement("CipherMode");
 			mode.appendChild(doc.createTextNode("ECB")); // TODO use real value
 			root.appendChild(mode);
 
-			// IV
+			// IV node
 			if (cipher.getIV() != null) {
 				Element iv = doc.createElement("IV");
 				iv.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(cipher.getIV())));
@@ -94,7 +94,6 @@ public class Utils {
 				nameNode.appendChild(doc.createTextNode(user.name));
 				userNode.appendChild(nameNode);
 					// encrypt session key
-					//RSAPublicKey pubkey = loadPublicKey("klucze" + File.separator + user.name + ".pub"); // TODO see if this naming scheme is OK
 					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
 					rsa.init(Cipher.ENCRYPT_MODE, user.pubkey);
 					byte[] key = rsa.doFinal(sessionKey.getEncoded());
@@ -184,26 +183,20 @@ public class Utils {
 		doc.getDocumentElement().normalize();
 
 		// get keys nad usernames
-		SecretKey sessionKey = null; // TODO have a list of keys and usernames
 		NodeList userNodes = doc.getElementsByTagName("User");
 		for (int i = 0; i < userNodes.getLength(); i++) {
-			Node n = userNodes.item(i);
+			Node userNode = userNodes.item(i);
 
-			if (n.getNodeType() == Node.ELEMENT_NODE) {
-				Element e = (Element) n;
-				String recipientName = e.getElementsByTagName("Name").item(0).getFirstChild().getNodeValue();
-				String keyString = e.getElementsByTagName("SessionKey").item(0).getFirstChild().getNodeValue();
+			if (userNode.getNodeType() == Node.ELEMENT_NODE) {
+				Element userElement = (Element) userNode;
+				String recipientName = userElement.getElementsByTagName("Name").item(0).getFirstChild().getNodeValue();
+				String keyString = userElement.getElementsByTagName("SessionKey").item(0).getFirstChild().getNodeValue();
 				byte[] encryptedKey = Base64.getDecoder().decode(keyString);
 
 				User u = new User(recipientName);
 				u.encryptedKey = encryptedKey;
 				users.add(u);
-
-				//break; // TODO actually find the correct user
 			}
-		}
-		if (sessionKey == null) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Key cannot be read.");
 		}
 
 		return users;
@@ -211,6 +204,7 @@ public class Utils {
 
 	public static void generateRSAKeypair(String pubFilename, String privFilename) {
 		KeyPairGenerator generator = null;
+
 		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename)));
 				PemWriter privWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(privFilename))) ) {
 			// set up generator
@@ -241,8 +235,10 @@ public class Utils {
 		PemReader reader = new PemReader(new FileReader(filename));
 		PemObject obj = reader.readPemObject();
 		byte[] data = obj.getContent();
+
 		X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(data);
 		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+
 		return (RSAPublicKey) factory.generatePublic(pubKeySpec);
 	}
 
@@ -250,59 +246,19 @@ public class Utils {
 		PemReader reader = new PemReader(new FileReader(filename));
 		PemObject obj = reader.readPemObject();
 		byte[] data = obj.getContent();
+
 		PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(data);
 		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+
 		return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
-	}
-
-	public static byte[] twofishEncrypt(byte[] data, SecretKey key) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {
-		Cipher cipher = null;
-		byte[] encrypted = null;
-		// preparation
-		cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-
-		// really encrypt stuff
-		encrypted = cipher.doFinal(data);
-
-		return encrypted;
-	}
-
-	// TODO throws Exception?
-	public static byte[] twofishDecrypt(byte[] data, SecretKey key) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {
-		Cipher cipher = null;
-		byte[] decrypted = null;
-		// preparation
-		cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
-		cipher.init(Cipher.DECRYPT_MODE, key);
-
-		// really decrypt stuff
-		decrypted = cipher.doFinal(data);
-
-		return decrypted;
 	}
 
 	public static SecretKey generateKey() throws NoSuchAlgorithmException {
 		SecureRandom rand = new SecureRandom();
-
 		KeyGenerator generator = KeyGenerator.getInstance("Twofish");
+
 		generator.init(rand);
-		SecretKey secretKey = generator.generateKey();
 
-		return secretKey;
-	}
-
-	public static int checkMaxKeyLength(String cipher) {
-		int allowedKeyLength = 0;
-
-		try {
-			allowedKeyLength = Cipher.getMaxAllowedKeyLength(cipher);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-
-		System.out.println("The allowed key length for " + cipher + " is: " + allowedKeyLength);
-
-		return allowedKeyLength;
+		return generator.generateKey();
 	}
 }

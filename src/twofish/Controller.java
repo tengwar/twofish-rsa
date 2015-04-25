@@ -25,11 +25,15 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable{
+	// These are lists for ListViews of recipients, for encryption and decryption tab respectively
 	ObservableList<User> encryptionRecipients = FXCollections.observableArrayList();
 	ObservableList<User> decryptionRecipients = FXCollections.observableArrayList();
+
+	// We need stage for open and save dialogs,
+	// so we get it from Main.start(...) trough Controller.setStage(...) method seen somewhere below
 	private Stage stage;
 
-	// encryption
+	// encryption tab widgets
 	@FXML
 	private TextField selectFileToEncryptTextField;
 	@FXML
@@ -55,7 +59,7 @@ public class Controller implements Initializable{
 	@FXML
 	private Button encryptButton;
 
-	// decryption
+	// decryption tab widgets
 	@FXML
 	private TextField selectFileToDecryptTextField;
 	@FXML
@@ -75,10 +79,6 @@ public class Controller implements Initializable{
 	@FXML
 	private Button decryptButton;
 
-	@FXML
-	void printText(){
-		System.out.println("top lel");
-	}
 
 	@FXML
 	void createRSAKeys() {
@@ -92,8 +92,7 @@ public class Controller implements Initializable{
 			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
 			byte[] plainData = Files.readAllBytes(plainFile);
 
-			// write encrypted
-			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
+			// encrypt
 			byte[] encryptedData = Utils.encrypt(plainData, encryptionRecipients);
 
 			// write encrypted
@@ -102,7 +101,7 @@ public class Controller implements Initializable{
 			if (encryptedFile != null && encryptedData != null) {
 				Files.write(encryptedFile, encryptedData);
 			} else {
-				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot encrypt file.");
+				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot encrypt or write file.");
 			}
 
 		} catch (IOException e) {
@@ -163,12 +162,15 @@ public class Controller implements Initializable{
 	}
 
 	@FXML
-	void addRecipient() {
+	void addRecipients() {
 		try {
+			// set up a file chooser
 			FileChooser chooser = new FileChooser();
 			chooser.setTitle("Wybierz klucz publiczny adresata");
 			chooser.setInitialDirectory(new File("klucze"));
 			chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Public key", "*.pub"));
+
+			// show chooser and process chosen files TODO find better way to get usernames; this is too hacky
 			List<File> files = chooser.showOpenMultipleDialog(stage);
 			if (files != null) {
 				for (File file : files) {
@@ -177,7 +179,8 @@ public class Controller implements Initializable{
 					sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
 					User user = new User(sb.toString());
 					user.pubkey = Utils.loadPublicKey(file.getCanonicalPath());
-					encryptionRecipients.add(user); // TODO prevent duplicates
+					if (!encryptionRecipients.contains(user))
+						encryptionRecipients.add(user);
 				}
 			}
 		} catch (NoSuchAlgorithmException e) {
@@ -193,18 +196,18 @@ public class Controller implements Initializable{
 	}
 
 	@FXML
-	void removeRecipient() {
-		ObservableList<User> selectedItems = editRecipientsListView.getSelectionModel().getSelectedItems();
-		encryptionRecipients.removeAll(selectedItems);
+	void removeRecipients() {
+		ObservableList<User> selectedRecipients = editRecipientsListView.getSelectionModel().getSelectedItems();
+		encryptionRecipients.removeAll(selectedRecipients);
 	}
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		// set lists for the ListView
+		// Set lists for the ListViews
 		editRecipientsListView.setItems(encryptionRecipients);
 		showRecipientsListView.setItems(decryptionRecipients);
 
-		// enable multiple selection
+		// Enable multiple selection
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 	}

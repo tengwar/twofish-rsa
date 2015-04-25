@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.*?>
-<?import javafx.scene.layout.*?>
-<?import java.lang.*?>
 <?import javafx.scene.control.*?>
-
+<?import javafx.scene.layout.*?>
 <VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="twofish.Controller">
    <children>
       <MenuBar>
@@ -46,7 +44,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button fx:id="selectFileToEncryptButton" mnemonicParsing="false" onAction="#printText" text="Wybierz plik">
+                                    <Button fx:id="selectFileToEncryptButton" mnemonicParsing="false" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -120,12 +118,12 @@
                                     </ListView>
                                     <VBox alignment="TOP_CENTER" HBox.hgrow="SOMETIMES">
                                        <children>
-                                          <Button fx:id="addRecipientButton" mnemonicParsing="false" onAction="#addRecipient" text="+">
+                                          <Button fx:id="addRecipientButton" mnemonicParsing="false" onAction="#addRecipients" text="+">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button fx:id="removeRecipientButton" minWidth="25.0" mnemonicParsing="false" onAction="#removeRecipient" text="-">
+                                          <Button fx:id="removeRecipientButton" minWidth="25.0" mnemonicParsing="false" onAction="#removeRecipients" text="-">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
