@@ -23,7 +23,7 @@ public class Main extends Application {
 		try {
 			System.out.println("The allowed key length for Twofish is: " + Cipher.getMaxAllowedKeyLength("Twofish"));
 		} catch (NoSuchAlgorithmException e) {
-			System.out.println("Twofish algorithm is not supported, install BouncyCastle.");
+			System.err.println("Twofish algorithm is not supported, install BouncyCastle.");
 		}
 
 		Path klucze = Paths.get("klucze");
@@ -31,7 +31,7 @@ public class Main extends Application {
 			if (Files.notExists(klucze))
 				Files.createDirectory(klucze);
 		} catch (IOException|SecurityException e) {
-			System.out.println("Directory klucze is needed by this app.");
+			System.err.println("Directory klucze is needed by this app.");
 		}
 
 //		// list providers for debug
