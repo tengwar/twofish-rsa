@@ -65,7 +65,7 @@ public class Controller implements Initializable{
 	@FXML
 	private Button whereToSaveDecryptedFileButton;
 	@FXML
-	private ListView<User> recipientsListView;
+	private ListView<User> showRecipientsListView;
 	@FXML
 	private PasswordField passwordField;
 	@FXML
@@ -192,15 +192,21 @@ public class Controller implements Initializable{
 
 	}
 
-//	@FXML
-//	void removeRecipient() {
-//		recipientsListView.getSelectionModel()
-//	}
+	@FXML
+	void removeRecipient() {
+		ObservableList<User> selectedItems = editRecipientsListView.getSelectionModel().getSelectedItems();
+		encryptionRecipients.removeAll(selectedItems);
+	}
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
+		// set lists for the ListView
 		editRecipientsListView.setItems(encryptionRecipients);
-		recipientsListView.setItems(decryptionRecipients);
+		showRecipientsListView.setItems(decryptionRecipients);
+
+		// enable multiple selection
+		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 	}
 
 	public void setStage(Stage stage) {

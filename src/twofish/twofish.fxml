@@ -125,7 +125,7 @@
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button fx:id="removeRecipientButton" minWidth="25.0" mnemonicParsing="false" text="-">
+                                          <Button fx:id="removeRecipientButton" minWidth="25.0" mnemonicParsing="false" onAction="#removeRecipient" text="-">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                              </VBox.margin>
@@ -205,7 +205,7 @@
                               </Label>
                               <HBox alignment="CENTER">
                                  <children>
-                                    <ListView fx:id="recipientsListView" HBox.hgrow="SOMETIMES">
+                                    <ListView fx:id="showRecipientsListView" HBox.hgrow="SOMETIMES">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
