@@ -227,7 +227,7 @@ public class Utils {
 		} catch (FileNotFoundException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename + "\" not found.");
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"\" + pubFilename + \"\\\" or \\\"\" + privFilename + \"\" file.");
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" + privFilename + "\" file.");
 		}
 	}
 
