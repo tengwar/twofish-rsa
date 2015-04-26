@@ -3,6 +3,7 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+
 <VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="twofish.Controller">
    <children>
       <MenuBar>
@@ -44,7 +45,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button fx:id="selectFileToEncryptButton" mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="selectFileToEncryptButton" mnemonicParsing="false" onAction="#showFileDialog" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -63,7 +64,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button fx:id="whereToSaveEncryptedFileButton" mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="whereToSaveEncryptedFileButton" mnemonicParsing="false" onAction="#showFileDialog" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -170,7 +171,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button fx:id="selectFileToDecryptButton" mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="selectFileToDecryptButton" mnemonicParsing="false" onAction="#showFileDialog" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
@@ -189,7 +190,7 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </TextField>
-                                    <Button fx:id="whereToSaveDecryptedFileButton" mnemonicParsing="false" text="Wybierz plik">
+                                    <Button fx:id="whereToSaveDecryptedFileButton" mnemonicParsing="false" onAction="#showFileDialog" text="Wybierz plik">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>

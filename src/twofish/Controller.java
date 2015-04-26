@@ -2,6 +2,7 @@ package twofish;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -20,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -199,6 +201,98 @@ public class Controller implements Initializable{
 	void removeRecipients() {
 		ObservableList<User> selectedRecipients = editRecipientsListView.getSelectionModel().getSelectedItems();
 		encryptionRecipients.removeAll(selectedRecipients);
+	}
+
+	// This is a generic method that chooses a file to open/save and sets the appropriate textbox's text.
+	// The fact that it's generic made it complicated and less readable, sorry. :)
+	@FXML
+	void showFileDialog(ActionEvent event) {
+		if ( !(event.getSource() instanceof Button) ) { // if it wasn't called by a button, then we have a bug
+			System.err.println("showFileDialog is meant to be called only by a button!");
+			return;
+		}
+		Button button = (Button) event.getSource();
+
+		TextField textField;
+		String title;
+		List<TextField> textFields = new ArrayList<>();
+
+		if (button.equals(selectFileToEncryptButton)) {
+			textField = selectFileToEncryptTextField;
+			title = "Wybierz plik do zaszyfrowania";
+
+			// all the textfields are ordered for a reason - see below
+			textFields.add(textField);
+			textFields.add(whereToSaveEncryptedFileTextField);
+			textFields.add(selectFileToDecryptTextField);
+			textFields.add(whereToSaveDecryptedFileTextField);
+		} else if (button.equals(selectFileToDecryptButton)) {
+			textField = selectFileToDecryptTextField;
+			title = "Wybierz plik do zdeszyfrowania";
+
+			// all the textfields are ordered for a reason - see below
+			textFields.add(textField);
+			textFields.add(whereToSaveDecryptedFileTextField);
+			textFields.add(whereToSaveEncryptedFileTextField);
+			textFields.add(selectFileToEncryptTextField);
+		} else if (button.equals(whereToSaveEncryptedFileButton)) {
+			textField = whereToSaveEncryptedFileTextField;
+			title = "Zapisz zaszyfrowany plik jako...";
+
+			// all the textfields are ordered for a reason - see below
+			textFields.add(textField);
+			textFields.add(selectFileToEncryptTextField);
+			textFields.add(selectFileToDecryptTextField);
+			textFields.add(whereToSaveDecryptedFileTextField);
+		} else  if (button.equals(whereToSaveDecryptedFileButton)) {
+			textField = whereToSaveDecryptedFileTextField;
+			title = "Zapisz zdeszyfrowany plik jako...";
+
+			// all the textfields are ordered for a reason - see below
+			textFields.add(textField);
+			textFields.add(selectFileToDecryptTextField);
+			textFields.add(selectFileToEncryptTextField);
+			textFields.add(whereToSaveEncryptedFileTextField);
+		} else {
+			System.err.println("You used a showFileDialog from a wrong button!");
+			return;
+		}
+
+		try {
+			// set up a file chooser
+			FileChooser chooser = new FileChooser();
+			chooser.setTitle(title);
+			// This weird code is for user experience - to open a dialog in a likely directory
+			// and by likely I mean a directory that is already used somewhere. First we check
+			// the textbox next to the button user clicked, then the other textbox on the same tab,
+			// then the open file textbox from the other tab and finally the save file textbox
+			// from the other tab. (Except for selecting file for decryption, then we swap those
+			// 2 last ones.)
+			for (TextField tf : textFields) {
+				if (!tf.getText().isEmpty()) { // find the first not empty text field that we can get a directory from
+					File directory = new File(tf.getText()).getParentFile();
+					if (directory != null) {
+						chooser.setInitialDirectory(directory);
+						break;
+					}
+				}
+			}
+
+			// show chooser and process chosen file
+			File file;
+			if (button.equals(selectFileToEncryptButton) || button.equals(selectFileToDecryptButton)) { // open file button
+				file = chooser.showOpenDialog(stage);
+			} else { // save file button
+				file = chooser.showSaveDialog(stage);
+			}
+
+			if (file != null) {
+				String path = file.getCanonicalPath();
+				textField.setText(path);
+			}
+		} catch (IOException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read or save chosen file.");
+		}
 	}
 
 	@Override
