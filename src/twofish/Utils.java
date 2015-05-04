@@ -15,6 +15,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,14 +38,16 @@ import java.util.Base64;
 import java.util.List;
 
 public class Utils {
-	public static byte[] encrypt(byte[] data, List<User> users) {
+	public static byte[] encrypt(byte[] data, HeaderInfo info) /* TODO output nice XML */ {
+		CipherMode mode = info.cipherMode;
 		byte[] file = null;
+
 		try {
 			// generate key
-			SecretKey sessionKey = generateKey();
+			SecretKey sessionKey = generateKey(info.keysize); // TODO allow setting size
 
 			// prepare cipher
-			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
+			Cipher cipher = Cipher.getInstance("Twofish/"+ mode.toString() + "/PKCS5Padding");
 			cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
 			// encrypt
@@ -60,20 +63,21 @@ public class Utils {
 
 			// algorithm node
 			Element algorithm = doc.createElement("Algorithm");
-			algorithm.appendChild(doc.createTextNode("Twofish"));
+			algorithm.appendChild(doc.createTextNode(info.algorithm));
 			root.appendChild(algorithm);
 
 			// key size node
 			Element keysize = doc.createElement("KeySize");
+			// We could get size from HeaderInfo, but to always get the real value even if code changes we do this:
 			keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
 			root.appendChild(keysize);
 
 			// TODO subblock size
 
 			// cipher mode node
-			Element mode = doc.createElement("CipherMode");
-			mode.appendChild(doc.createTextNode("ECB")); // TODO use real value
-			root.appendChild(mode);
+			Element modeNode = doc.createElement("CipherMode");
+			modeNode.appendChild(doc.createTextNode(mode.toString()));
+			root.appendChild(modeNode);
 
 			// IV node
 			if (cipher.getIV() != null) {
@@ -86,8 +90,8 @@ public class Utils {
 			Element usersNode = doc.createElement("ApprovedUsers");
 			root.appendChild(usersNode);
 
-			// add users TODO use actual users
-			for (User user : users) {
+			// add users
+			for (User user : info.users) {
 				Element userNode = doc.createElement("User");
 				usersNode.appendChild(userNode);
 				Element nameNode = doc.createElement("Name");
@@ -141,7 +145,7 @@ public class Utils {
 		return file;
 	}
 
-	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey) {
+	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey, CipherMode mode, byte[] iv) {
 		byte[] decrypted = null;
 		try {
 			// decrypt session key
@@ -152,8 +156,8 @@ public class Utils {
 			sessionKey = new SecretKeySpec(key, "Twofish");
 
 			// prepare cipher
-			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS5Padding");
-			cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+			Cipher cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS5Padding");
+			cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv));
 
 			// decrypt
 			decrypted = cipher.doFinal(encryptedData);
@@ -161,26 +165,46 @@ public class Utils {
 		} catch (IllegalBlockSizeException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
 		} catch (InvalidKeyException e) {
-			// Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid."); // TODO is this OK?
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid."); // TODO is this OK?
 		} catch (BadPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
 		} catch (NoSuchAlgorithmException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+		} catch (InvalidAlgorithmParameterException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid algorithm parameter (probably IV).");
 		}
 
 		return decrypted;
 	}
 
-	public static List<User> parseHeader(byte[] header) throws ParserConfigurationException, IOException, SAXException {
-		List<User> users = new ArrayList<>();
+	public static HeaderInfo parseHeader(byte[] header) throws ParserConfigurationException, IOException, SAXException, NumberFormatException {
+		HeaderInfo parsedInfo = new HeaderInfo();
+		parsedInfo.users = new ArrayList<>();
 
 		// parse XML
 		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 		Document doc = db.parse(new ByteArrayInputStream(header));
 		// see http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
 		doc.getDocumentElement().normalize();
+
+		// get algorithm
+		parsedInfo.algorithm = doc.getElementsByTagName("Algorithm").item(0).getFirstChild().getNodeValue();
+
+		// get key size
+		parsedInfo.keysize = Integer.parseInt(
+				doc.getElementsByTagName("KeySize").item(0).getFirstChild().getNodeValue());
+
+		// get cipher mode of operation
+		parsedInfo.cipherMode = CipherMode.valueOf(
+				doc.getElementsByTagName("CipherMode").item(0).getFirstChild().getNodeValue());
+
+		// get IV
+		if (parsedInfo.cipherMode != CipherMode.ECB) {
+			String base64IV = doc.getElementsByTagName("IV").item(0).getFirstChild().getNodeValue();
+			parsedInfo.iv = Base64.getDecoder().decode(base64IV);
+		}
 
 		// get keys nad usernames
 		NodeList userNodes = doc.getElementsByTagName("User");
@@ -195,11 +219,11 @@ public class Utils {
 
 				User u = new User(recipientName);
 				u.encryptedKey = encryptedKey;
-				users.add(u);
+				parsedInfo.users.add(u);
 			}
 		}
 
-		return users;
+		return parsedInfo;
 	}
 
 	public static void generateRSAKeypair(String pubFilename, String privFilename) {
@@ -253,11 +277,10 @@ public class Utils {
 		return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
 	}
 
-	public static SecretKey generateKey() throws NoSuchAlgorithmException {
-		SecureRandom rand = new SecureRandom();
+	public static SecretKey generateKey(int keysize) throws NoSuchAlgorithmException {
 		KeyGenerator generator = KeyGenerator.getInstance("Twofish");
 
-		generator.init(rand);
+		generator.init(keysize);
 
 		return generator.generateKey();
 	}

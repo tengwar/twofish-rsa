@@ -95,7 +95,12 @@ public class Controller implements Initializable{
 			byte[] plainData = Files.readAllBytes(plainFile);
 
 			// encrypt
-			byte[] encryptedData = Utils.encrypt(plainData, encryptionRecipients);
+			HeaderInfo info = new HeaderInfo();
+			info.cipherMode = (CipherMode) (operationModeChoiceBox.getSelectionModel().getSelectedItem());
+			info.users = encryptionRecipients;
+			info.algorithm = "Twofish";
+			info.keysize = 256;
+			byte[] encryptedData = Utils.encrypt(plainData, info);
 
 			// write encrypted
 			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
@@ -133,12 +138,13 @@ public class Controller implements Initializable{
 			}
 
 			// process header TODO separate it from decryption and load on file selected
-			List<User> users = Utils.parseHeader(header);
-			decryptionRecipients.addAll(users);
+			HeaderInfo info = Utils.parseHeader(header);
+			assert info.algorithm.equals("Twofish"); // TODO leave it? What do assertions really do?
+			decryptionRecipients.addAll(info.users);
 
 			// decrypt
-			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + users.get(0).name); // TODO see if key name is OK
-			byte[] decryptedData = Utils.decrypt(encryptedData, users.get(0).encryptedKey, privkey);
+			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name); // TODO see if key name is OK
+			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey, info.cipherMode, info.iv);
 
 			// write decrypted
 			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
@@ -304,6 +310,10 @@ public class Controller implements Initializable{
 		// Enable multiple selection
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+		// Set items for the ChoiceBox
+		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));
+		operationModeChoiceBox.getSelectionModel().selectFirst();
 	}
 
 	public void setStage(Stage stage) {
