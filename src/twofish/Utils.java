@@ -156,7 +156,11 @@ public class Utils {
 
 			// prepare cipher
 			Cipher cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS5Padding");
-			cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv));
+			if (mode == CipherMode.ECB) {
+				cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
+			} else {
+				cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv));
+			}
 
 			// decrypt
 			decrypted = cipher.doFinal(encryptedData);
