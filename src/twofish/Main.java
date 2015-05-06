@@ -42,7 +42,7 @@ public class Main extends Application {
 //		}
 
 		final FXMLLoader loader = new FXMLLoader(getClass().getResource("twofish.fxml"));
-		final Parent root = (Parent) loader.load();
+		final Parent root = loader.load();
 		((Controller) loader.getController()).setStage(primaryStage);
 		primaryStage.setTitle("Twofish");
 		primaryStage.setScene(new Scene(root));

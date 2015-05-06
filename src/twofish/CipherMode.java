@@ -7,5 +7,5 @@ public enum CipherMode {
 	ECB,
 	CBC,
 	CFB,
-	OFB;
+	OFB
 }

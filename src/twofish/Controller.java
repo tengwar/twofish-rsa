@@ -147,8 +147,10 @@ public class Controller implements Initializable{
 			decryptionRecipients.addAll(info.users);
 
 			// decrypt
-			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name); // TODO see if key name is OK
-			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey, info.cipherMode, info.subblockSize, info.iv);
+			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name);
+					// TODO see if key name above is OK
+			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey,
+					info.cipherMode, info.subblockSize, info.iv);
 
 			// write decrypted
 			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
@@ -311,7 +313,7 @@ public class Controller implements Initializable{
 		editRecipientsListView.setItems(encryptionRecipients);
 		showRecipientsListView.setItems(decryptionRecipients);
 
-		// Enable multiple selection
+		// Enable multiple selection in ListViews
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -329,7 +331,7 @@ public class Controller implements Initializable{
 				}
 			}
 		});
-		operationModeChoiceBox.getSelectionModel().selectFirst();
+		operationModeChoiceBox.getSelectionModel().select(CipherMode.CBC);
 
 		// Set up key size ChoiceBox
 		keyLengthChoiceBox.setItems(FXCollections.observableArrayList(128, 192, 256));

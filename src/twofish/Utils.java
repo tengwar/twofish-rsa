@@ -40,7 +40,7 @@ public class Utils {
 
 		try {
 			// generate key
-			SecretKey sessionKey = generateKey(info.keysize); // TODO allow setting size
+			SecretKey sessionKey = generateKey(info.keysize);
 
 			// prepare cipher
 			Cipher cipher;
@@ -128,7 +128,8 @@ public class Utils {
 
 			transformer.transform(source, result);
 
-			baos.write(new byte[1]); // a zero byte separating xml and binary; array is guaranteed to be zeroed when created
+			baos.write(new byte[1]); // a zero byte separating xml and binary
+			                         // (array is guaranteed to be zeroed when created)
 			baos.write(encrypted);
 			file = baos.toByteArray();
 
@@ -139,9 +140,10 @@ public class Utils {
 		} catch (TransformerException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "XML transformer exception.");
 		} catch (InvalidKeyException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid."); // TODO is this OK?
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.");
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.");
+			Alert alert = new Alert(Alert.AlertType.WARNING,
+					"Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
 		} catch (BadPaddingException e) {
@@ -155,7 +157,8 @@ public class Utils {
 		return file;
 	}
 
-	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey, CipherMode mode, int subblockSize, byte[] iv) {
+	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey,
+	                             CipherMode mode, int subblockSize, byte[] iv) {
 		byte[] decrypted = null;
 		try {
 			// decrypt session key
@@ -189,7 +192,8 @@ public class Utils {
 		} catch (BadPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.");
+			Alert alert = new Alert(Alert.AlertType.WARNING,
+					"Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
 		} catch (InvalidAlgorithmParameterException e) {
@@ -199,7 +203,8 @@ public class Utils {
 		return decrypted;
 	}
 
-	public static HeaderInfo parseHeader(byte[] header) throws ParserConfigurationException, IOException, SAXException, NumberFormatException {
+	public static HeaderInfo parseHeader(byte[] header) throws ParserConfigurationException, IOException, SAXException,
+			NumberFormatException {
 		HeaderInfo parsedInfo = new HeaderInfo();
 		parsedInfo.users = new ArrayList<>();
 
@@ -275,13 +280,16 @@ public class Utils {
 		} catch (NoSuchProviderException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Bouncy Castle provider not found. Install Bouncy Castle.");
 		} catch (FileNotFoundException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename + "\" not found.");
+			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename +
+					"\" not found.");
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" + privFilename + "\" file.");
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" +
+					privFilename + "\" file.");
 		}
 	}
 
-	public static RSAPublicKey loadPublicKey(String filename) throws IOException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException {
+	public static RSAPublicKey loadPublicKey(String filename) throws IOException, NoSuchProviderException,
+			NoSuchAlgorithmException, InvalidKeySpecException {
 		PemReader reader = new PemReader(new FileReader(filename));
 		PemObject obj = reader.readPemObject();
 		byte[] data = obj.getContent();
@@ -292,7 +300,8 @@ public class Utils {
 		return (RSAPublicKey) factory.generatePublic(pubKeySpec);
 	}
 
-	public static RSAPrivateKey loadPrivateKey(String filename) throws IOException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException {
+	public static RSAPrivateKey loadPrivateKey(String filename) throws IOException, NoSuchProviderException,
+			NoSuchAlgorithmException, InvalidKeySpecException {
 		PemReader reader = new PemReader(new FileReader(filename));
 		PemObject obj = reader.readPemObject();
 		byte[] data = obj.getContent();
