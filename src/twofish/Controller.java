@@ -99,7 +99,7 @@ public class Controller implements Initializable{
 			info.cipherMode = (CipherMode) (operationModeChoiceBox.getSelectionModel().getSelectedItem());
 			info.users = encryptionRecipients;
 			info.algorithm = "Twofish";
-			info.keysize = 256;
+			info.keysize = (int) keyLengthChoiceBox.getSelectionModel().getSelectedItem();
 			byte[] encryptedData = Utils.encrypt(plainData, info);
 
 			// write encrypted
@@ -314,6 +314,10 @@ public class Controller implements Initializable{
 		// Set items for the ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));
 		operationModeChoiceBox.getSelectionModel().selectFirst();
+
+		// Set items for key size ChoiceBox
+		keyLengthChoiceBox.setItems(FXCollections.observableArrayList(128, 192, 256));
+		keyLengthChoiceBox.getSelectionModel().selectLast();
 	}
 
 	public void setStage(Stage stage) {
