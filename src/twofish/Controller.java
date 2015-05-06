@@ -1,5 +1,7 @@
 package twofish;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -100,6 +102,8 @@ public class Controller implements Initializable{
 			info.users = encryptionRecipients;
 			info.algorithm = "Twofish";
 			info.keysize = (int) keyLengthChoiceBox.getSelectionModel().getSelectedItem();
+			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB)
+				info.subblockSize = (Integer) subblockLengthChoiceBox.getSelectionModel().getSelectedItem();
 			byte[] encryptedData = Utils.encrypt(plainData, info);
 
 			// write encrypted
@@ -139,12 +143,12 @@ public class Controller implements Initializable{
 
 			// process header TODO separate it from decryption and load on file selected
 			HeaderInfo info = Utils.parseHeader(header);
-			assert info.algorithm.equals("Twofish"); // TODO leave it? What do assertions really do?
+			assert info.algorithm.equals("Twofish");
 			decryptionRecipients.addAll(info.users);
 
 			// decrypt
 			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name); // TODO see if key name is OK
-			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey, info.cipherMode, info.iv);
+			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey, info.cipherMode, info.subblockSize, info.iv);
 
 			// write decrypted
 			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
@@ -311,12 +315,38 @@ public class Controller implements Initializable{
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-		// Set items for the ChoiceBox
+		// Set items for cipher operation mode ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));
+		operationModeChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+			@Override
+			public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+				CipherMode cipherMode = (CipherMode) newValue;
+				if (cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB) {
+					subblockLengthChoiceBox.setDisable(false);
+				} else {
+					// disable it since in current cipher operation mode it's not used
+					subblockLengthChoiceBox.setDisable(true);
+				}
+			}
+		});
 		operationModeChoiceBox.getSelectionModel().selectFirst();
 
-		// Set items for key size ChoiceBox
+		// Set up key size ChoiceBox
 		keyLengthChoiceBox.setItems(FXCollections.observableArrayList(128, 192, 256));
+		keyLengthChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+			@Override
+			public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+				int keysize = (int) newValue;
+				ObservableList<Integer> sizes = FXCollections.observableArrayList(Utils.getPossibleSubblockSizes(keysize));
+				subblockLengthChoiceBox.setItems(sizes);
+
+				// TODO perhaps manually preserve selected item if it's still valid?
+
+				// select last item if nothing is selected
+				if (subblockLengthChoiceBox.getSelectionModel().isEmpty())
+					subblockLengthChoiceBox.getSelectionModel().selectLast();
+			}
+		});
 		keyLengthChoiceBox.getSelectionModel().selectLast();
 	}
 

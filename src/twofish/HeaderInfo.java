@@ -8,6 +8,7 @@ import java.util.List;
 public class HeaderInfo {
 	public String algorithm;
 	public int keysize;
+	public int subblockSize;
 	public CipherMode cipherMode;
 	public byte[] iv;
 	public List<User> users;

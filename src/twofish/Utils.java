@@ -35,8 +35,7 @@ import java.util.Base64;
 import java.util.List;
 
 public class Utils {
-	public static byte[] encrypt(byte[] data, HeaderInfo info) /* TODO output nice XML */ {
-		CipherMode mode = info.cipherMode;
+	public static byte[] encrypt(byte[] data, HeaderInfo info) {
 		byte[] file = null;
 
 		try {
@@ -44,7 +43,13 @@ public class Utils {
 			SecretKey sessionKey = generateKey(info.keysize); // TODO allow setting size
 
 			// prepare cipher
-			Cipher cipher = Cipher.getInstance("Twofish/"+ mode.toString() + "/PKCS5Padding");
+			Cipher cipher;
+			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
+				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() +
+						String.valueOf(info.subblockSize) + "/PKCS5Padding");
+			} else {
+				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() + "/PKCS5Padding");
+			}
 			cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
 			// encrypt
@@ -69,11 +74,17 @@ public class Utils {
 			keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
 			root.appendChild(keysize);
 
-			// TODO subblock size
+			// subblock size
+			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
+				assert info.subblockSize != 0;
+				Element subblockSizeNode = doc.createElement("SegmentSize");
+				subblockSizeNode.appendChild(doc.createTextNode(String.valueOf(info.subblockSize)));
+				root.appendChild(subblockSizeNode);
+			}
 
 			// cipher mode node
 			Element modeNode = doc.createElement("CipherMode");
-			modeNode.appendChild(doc.createTextNode(mode.toString()));
+			modeNode.appendChild(doc.createTextNode(info.cipherMode.toString()));
 			root.appendChild(modeNode);
 
 			// IV node
@@ -144,7 +155,7 @@ public class Utils {
 		return file;
 	}
 
-	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey, CipherMode mode, byte[] iv) {
+	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey, CipherMode mode, int subblockSize, byte[] iv) {
 		byte[] decrypted = null;
 		try {
 			// decrypt session key
@@ -155,7 +166,13 @@ public class Utils {
 			sessionKey = new SecretKeySpec(key, "Twofish");
 
 			// prepare cipher
-			Cipher cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS5Padding");
+			Cipher cipher;
+			if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
+				cipher = Cipher.getInstance("Twofish/" + mode.toString() +
+						String.valueOf(subblockSize) + "/PKCS5Padding");
+			} else {
+				cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS5Padding");
+			}
 			if (mode == CipherMode.ECB) {
 				cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
 			} else {
@@ -202,6 +219,12 @@ public class Utils {
 		// get cipher mode of operation
 		parsedInfo.cipherMode = CipherMode.valueOf(
 				doc.getElementsByTagName("CipherMode").item(0).getFirstChild().getNodeValue());
+
+		// get subblock size
+		if (parsedInfo.cipherMode == CipherMode.CFB || parsedInfo.cipherMode == CipherMode.OFB) {
+			parsedInfo.subblockSize = Integer.valueOf(
+					doc.getElementsByTagName("SegmentSize").item(0).getFirstChild().getNodeValue());
+		}
 
 		// get IV
 		if (parsedInfo.cipherMode != CipherMode.ECB) {
@@ -278,6 +301,16 @@ public class Utils {
 		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
 
 		return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
+	}
+
+	public static List<Integer> getPossibleSubblockSizes(int keysize) {
+		List<Integer> sizes = new ArrayList<>();
+
+		for (int i = 8; i <= keysize; i+=8) {
+			sizes.add(i);
+		}
+
+		return sizes;
 	}
 
 	public static SecretKey generateKey(int keysize) throws NoSuchAlgorithmException {
