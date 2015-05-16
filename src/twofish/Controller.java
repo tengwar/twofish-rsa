@@ -112,11 +112,11 @@ public class Controller implements Initializable{
 			if (encryptedFile != null && encryptedData != null) {
 				Files.write(encryptedFile, encryptedData);
 			} else {
-				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot encrypt or write file.");
+				(new Alert(Alert.AlertType.WARNING, "Cannot encrypt or write file.")).show();
 			}
 
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot write file.");
+			(new Alert(Alert.AlertType.WARNING, "Cannot write file.")).show();
 		}
 	}
 
@@ -138,7 +138,7 @@ public class Controller implements Initializable{
 				}
 			}
 			if (header == null || encryptedData == null) {
-				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.");
+				(new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.")).show();
 			}
 
 			// process header TODO separate it from decryption and load on file selected
@@ -158,14 +158,14 @@ public class Controller implements Initializable{
 			if (decryptedFile != null && decryptedData != null) {
 				Files.write(decryptedFile, decryptedData);
 			} else {
-				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.");
+				(new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.")).show();
 			}
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read file.");
+			(new Alert(Alert.AlertType.WARNING, "Cannot read file.")).show();
 		} catch (ParserConfigurationException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.");
+			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
 		} catch (SAXException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "XML SAX exception.");
+			(new Alert(Alert.AlertType.WARNING, "XML SAX exception.")).show();
 		}
 	}
 
@@ -192,13 +192,13 @@ public class Controller implements Initializable{
 				}
 			}
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.");
+			(new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.")).show();
 		} catch (InvalidKeySpecException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
+			(new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.")).show();
 		} catch (NoSuchProviderException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
+			(new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.")).show();
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read the public key.");
+			(new Alert(Alert.AlertType.WARNING, "Cannot read the public key.")).show();
 		}
 
 	}
@@ -297,7 +297,7 @@ public class Controller implements Initializable{
 				textField.setText(path);
 			}
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot read or save chosen file.");
+			(new Alert(Alert.AlertType.WARNING, "Cannot read or save chosen file.")).show();
 		}
 	}
 

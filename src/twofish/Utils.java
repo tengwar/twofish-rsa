@@ -137,24 +137,24 @@ public class Utils {
 			file = baos.toByteArray();
 
 		} catch (ParserConfigurationException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.");
+			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
 		} catch (TransformerConfigurationException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "XML transformer configuration exception.");
+			(new Alert(Alert.AlertType.WARNING, "XML transformer configuration exception.")).show();
 		} catch (TransformerException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "XML transformer exception.");
+			(new Alert(Alert.AlertType.WARNING, "XML transformer exception.")).show();
 		} catch (InvalidKeyException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.");
+			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show();
 		} catch (NoSuchAlgorithmException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING,
 					"Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (BadPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
+			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
 		} catch (IllegalBlockSizeException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "ByteArrayOutputStream IO exception. Shouldn't happen.");
+			(new Alert(Alert.AlertType.WARNING, "ByteArrayOutputStream IO exception. Shouldn't happen.")).show();
 		}
 
 		return file;
@@ -189,18 +189,18 @@ public class Utils {
 			decrypted = cipher.doFinal(encryptedData);
 
 		} catch (IllegalBlockSizeException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
 		} catch (InvalidKeyException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid."); // TODO is this OK?
+			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show(); // TODO is this OK?
 		} catch (BadPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
+			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
 		} catch (NoSuchAlgorithmException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING,
 					"Twofish algorithm is not supported, install BouncyCastle.");
 		} catch (NoSuchPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (InvalidAlgorithmParameterException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid algorithm parameter (probably IV).");
+			(new Alert(Alert.AlertType.WARNING, "Invalid algorithm parameter (probably IV).")).show();
 		}
 
 		return decrypted;
@@ -288,13 +288,13 @@ public class Utils {
 			if (encryptedFile != null && encryptedPrivKey != null) {
 				Files.write(encryptedFile, encryptedPrivKey);
 			} else {
-				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot save the private key.");
+				(new Alert(Alert.AlertType.WARNING, "Cannot save the private key.")).show();
 			}
 
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA is not supported. Install Bouncy Castle.");
+			(new Alert(Alert.AlertType.WARNING, "RSA is not supported. Install Bouncy Castle.")).show();
 		} catch (NoSuchProviderException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Bouncy Castle provider not found. Install Bouncy Castle.");
+			(new Alert(Alert.AlertType.WARNING, "Bouncy Castle provider not found. Install Bouncy Castle.")).show();
 		} catch (FileNotFoundException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename +
 					"\" not found.");
@@ -302,13 +302,13 @@ public class Utils {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" +
 					privFilename + "\" file.");
 		} catch (NoSuchPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (BadPaddingException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
+			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
 		} catch (IllegalBlockSizeException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
+			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
 		} catch (InvalidKeyException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.");
+			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show();
 		}
 	}
 
