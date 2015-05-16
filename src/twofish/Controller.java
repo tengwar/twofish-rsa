@@ -86,7 +86,7 @@ public class Controller implements Initializable{
 
 	@FXML
 	void createRSAKeys() {
-		Utils.generateRSAKeypair("klucze\\key.pub", "klucze\\key");
+		Utils.generateRSAKeypair("klucze\\key.pub", "klucze\\key", "haslo");
 	}
 
 	@FXML
@@ -147,7 +147,7 @@ public class Controller implements Initializable{
 			decryptionRecipients.addAll(info.users);
 
 			// decrypt
-			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name);
+			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name, passwordField.getText());
 					// TODO see if key name above is OK
 			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey,
 					info.cipherMode, info.subblockSize, info.iv);
@@ -166,12 +166,6 @@ public class Controller implements Initializable{
 			Alert alert = new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.");
 		} catch (SAXException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "XML SAX exception.");
-		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.");
-		} catch (NoSuchProviderException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.");
-		} catch (InvalidKeySpecException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.");
 		}
 	}
 

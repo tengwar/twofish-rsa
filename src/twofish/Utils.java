@@ -24,6 +24,9 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -46,9 +49,9 @@ public class Utils {
 			Cipher cipher;
 			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
 				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() +
-						String.valueOf(info.subblockSize) + "/PKCS5Padding");
+						String.valueOf(info.subblockSize) + "/PKCS7Padding");
 			} else {
-				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() + "/PKCS5Padding");
+				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() + "/PKCS7Padding");
 			}
 			cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
@@ -172,9 +175,9 @@ public class Utils {
 			Cipher cipher;
 			if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
 				cipher = Cipher.getInstance("Twofish/" + mode.toString() +
-						String.valueOf(subblockSize) + "/PKCS5Padding");
+						String.valueOf(subblockSize) + "/PKCS7Padding");
 			} else {
-				cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS5Padding");
+				cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS7Padding");
 			}
 			if (mode == CipherMode.ECB) {
 				cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
@@ -257,11 +260,10 @@ public class Utils {
 		return parsedInfo;
 	}
 
-	public static void generateRSAKeypair(String pubFilename, String privFilename) {
+	public static void generateRSAKeypair(String pubFilename, String privFilename, String password) {
 		KeyPairGenerator generator = null;
 
-		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename)));
-				PemWriter privWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(privFilename))) ) {
+		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename))) ) {
 			// set up generator
 			generator = KeyPairGenerator.getInstance("RSA", "BC");
 			generator.initialize(2048);
@@ -271,9 +273,23 @@ public class Utils {
 			RSAPrivateKey priv = (RSAPrivateKey) keyPair.getPrivate();
 			RSAPublicKey pub = (RSAPublicKey) keyPair.getPublic();
 
+			// encrypt the private key
+			MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+			byte[] hash = sha256.digest(password.getBytes());   // hash the password
+			SecretKey key = new SecretKeySpec(hash, "Twofish"); // use the hash as encryption key, not password
+			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS7Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			byte[] encryptedPrivKey = cipher.doFinal(priv.getEncoded());
+
 			// write the keys
 			pubWriter.writeObject(new PemObject("RSA PUBLIC KEY", pub.getEncoded()));
-			privWriter.writeObject(new PemObject("RSA PRIVATE KEY", priv.getEncoded()));
+			Files.deleteIfExists(Paths.get(privFilename));
+			Path encryptedFile = Files.createFile(Paths.get(privFilename));
+			if (encryptedFile != null && encryptedPrivKey != null) {
+				Files.write(encryptedFile, encryptedPrivKey);
+			} else {
+				Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot save the private key.");
+			}
 
 		} catch (NoSuchAlgorithmException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "RSA is not supported. Install Bouncy Castle.");
@@ -285,6 +301,14 @@ public class Utils {
 		} catch (IOException e) {
 			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" +
 					privFilename + "\" file.");
+		} catch (NoSuchPaddingException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.");
+		} catch (BadPaddingException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Padding is wrong.");
+		} catch (IllegalBlockSizeException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "That block size is not supported.");
+		} catch (InvalidKeyException e) {
+			Alert alert = new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.");
 		}
 	}
 
@@ -300,16 +324,40 @@ public class Utils {
 		return (RSAPublicKey) factory.generatePublic(pubKeySpec);
 	}
 
-	public static RSAPrivateKey loadPrivateKey(String filename) throws IOException, NoSuchProviderException,
-			NoSuchAlgorithmException, InvalidKeySpecException {
-		PemReader reader = new PemReader(new FileReader(filename));
-		PemObject obj = reader.readPemObject();
-		byte[] data = obj.getContent();
+	public static RSAPrivateKey loadPrivateKey(String filename, String password) throws IOException {
+		// get bytes from encrypted file
+		Path encryptedFilePath = Paths.get(filename);
+		byte[] encryptedFile = Files.readAllBytes(encryptedFilePath);
 
-		PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(data);
-		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+		// do the real work
+		try {
+			// get the hash of password
+			MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+			byte[] hash = sha256.digest(password.getBytes());
 
-		return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
+			// actually decrypt the file
+			SecretKey key = new SecretKeySpec(hash, "Twofish");
+			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS7Padding");
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			byte[] decryptedFile = cipher.doFinal(encryptedFile);
+
+			// prepare key factory
+			PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(decryptedFile);
+			KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+
+			// finally get the key itself
+			return (RSAPrivateKey) factory.generatePrivate(privKeySpec);
+		} catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|IllegalBlockSizeException|
+				InvalidKeySpecException|InvalidKeyException e) {
+			// Either BC or policy file is not installed, user's Java is stupid or there is a bug here or in key generating.
+			(new Alert(Alert.AlertType.WARNING, "There was a problem loading the private key. Install Bouncy Castle and policy files. Exception: " + e.getClass().getSimpleName())).show();
+		} catch (BadPaddingException e) {
+			e.printStackTrace(); // TODO THIS LIKELY MEANS PASSWORD GIVEN WAS BAD. WHAT TO DO?
+		}
+
+		// we should never get here
+		assert true : "Check the control flow in loadPrivateKey()!";
+		return null;
 	}
 
 	public static List<Integer> getPossibleSubblockSizes(int keysize) {
