@@ -92,6 +92,10 @@ public class Controller implements Initializable{
 	@FXML
 	void encrypt() {
 		try {
+			if (encryptionRecipients.size() <= 0) {
+				(new Alert(Alert.AlertType.WARNING, "Add a recipient first.")).show();
+				return;
+			}
 			// read plain
 			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
 			byte[] plainData = Files.readAllBytes(plainFile);
