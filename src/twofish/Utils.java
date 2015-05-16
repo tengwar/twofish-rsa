@@ -24,6 +24,7 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -122,19 +123,22 @@ public class Utils {
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");                            // use indentation
 			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");    // indent with 4 spaces
 			DOMSource source = new DOMSource(doc);
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			StreamResult result = new StreamResult(baos);
+			ByteArrayOutputStream xmlBaos = new ByteArrayOutputStream();
+			StreamResult result = new StreamResult(xmlBaos);
 			// Output to console for testing
 			//StreamResult result = new StreamResult(System.out);
 			// Output to file
 			//StreamResult result = new StreamResult(new File(filePath));
-
 			transformer.transform(source, result);
 
-			baos.write(new byte[1]); // a zero byte separating xml and binary
-			                         // (array is guaranteed to be zeroed when created)
-			baos.write(encrypted);
-			file = baos.toByteArray();
+			byte[] xmlBytes = xmlBaos.toByteArray();
+
+			ByteArrayOutputStream fileBaos = new ByteArrayOutputStream();
+
+			fileBaos.write(intToByteArray(xmlBytes.length));    // write the XML size (int is 4 bytes in Java)
+			fileBaos.write(xmlBytes);                           // write the XML itself
+			fileBaos.write(encrypted);                          // write the encrypted data
+			file = fileBaos.toByteArray();
 
 		} catch (ParserConfigurationException e) {
 			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
@@ -376,5 +380,18 @@ public class Utils {
 		generator.init(keysize);
 
 		return generator.generateKey();
+	}
+
+	public static byte[] intToByteArray(int i) {
+		ByteBuffer bb = ByteBuffer.allocate(4); // Big endian by default.
+		bb.putInt(i);
+		return bb.array();
+	}
+
+	public static int byteArrayToInt(byte[] array) {
+		if (array.length != 4)
+			return 0;   // TODO perhaps signal error?
+
+		return ByteBuffer.wrap(array).getInt(); // Big endian by default.
 	}
 }

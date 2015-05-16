@@ -132,18 +132,10 @@ public class Controller implements Initializable{
 			byte[] data = Files.readAllBytes(encryptedFile);
 
 			// split encrypted file into header and data
-			byte[] header = null;
-			byte[] encryptedData = null;
-			for (int i = 0; i < data.length; i++) {
-				if (data[i] == 0) {
-					header = Arrays.copyOfRange(data, 0, i);
-					encryptedData = Arrays.copyOfRange(data, i + 1, data.length);
-					break;
-				}
-			}
-			if (header == null || encryptedData == null) {
-				(new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.")).show();
-			}
+			byte[] headerSizeBytes = Arrays.copyOfRange(data, 0, 4);
+			int headerSize = Utils.byteArrayToInt(headerSizeBytes);
+			byte[] header = Arrays.copyOfRange(data, 4, 4 + headerSize);
+			byte[] encryptedData = Arrays.copyOfRange(data, 4 + headerSize, data.length);
 
 			// process header TODO separate it from decryption and load on file selected
 			HeaderInfo info = Utils.parseHeader(header);
@@ -170,6 +162,8 @@ public class Controller implements Initializable{
 			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
 		} catch (SAXException e) {
 			(new Alert(Alert.AlertType.WARNING, "XML SAX exception.")).show();
+		} catch (ArrayIndexOutOfBoundsException|IllegalArgumentException e) {
+			(new Alert(Alert.AlertType.WARNING, "File seems to be broken. Did you choose the correct file?")).show();
 		}
 	}
 
