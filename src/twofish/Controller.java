@@ -4,6 +4,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -12,7 +13,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -21,10 +21,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -32,6 +30,13 @@ public class Controller implements Initializable{
 	// These are lists for ListViews of recipients, for encryption and decryption tab respectively
 	ObservableList<User> encryptionRecipients = FXCollections.observableArrayList();
 	ObservableList<User> decryptionRecipients = FXCollections.observableArrayList();
+
+	// Will be assigned to when user selects a file to decrypt.
+	HeaderInfo decryptionHeaderInfo = null;
+
+	// Tasks that will run in background
+	Task decryptionTask;
+	Task encryptionTask;
 
 	// We need stage for open and save dialogs,
 	// so we get it from Main.start(...) trough Controller.setStage(...) method seen somewhere below
@@ -126,44 +131,39 @@ public class Controller implements Initializable{
 
 	@FXML
 	void decrypt() {
-		try {
-			// read encrypted
-			Path encryptedFile = Paths.get(selectFileToDecryptTextField.getText());
-			byte[] data = Files.readAllBytes(encryptedFile);
+		if (decryptionTask != null && decryptionTask.isRunning()) {
+			// cancel the decryption task
+			decryptionTask.cancel(true);
 
-			// split encrypted file into header and data
-			byte[] headerSizeBytes = Arrays.copyOfRange(data, 0, 4);
-			int headerSize = Utils.byteArrayToInt(headerSizeBytes);
-			byte[] header = Arrays.copyOfRange(data, 4, 4 + headerSize);
-			byte[] encryptedData = Arrays.copyOfRange(data, 4 + headerSize, data.length);
+			decryptButton.setText("Deszyfruj");
+			decryptionProgressBar.progressProperty().unbind();
+			decryptionProgressBar.setProgress(0);
+		} else {
+			// prepare decryption task to be run in a new thread
+			decryptionTask = Utils.createDecryptTask(
+					showRecipientsListView.getSelectionModel().getSelectedItem(),
+					decryptionHeaderInfo,
+					passwordField.getText(),
+					selectFileToDecryptTextField.getText(),
+					whereToSaveDecryptedFileTextField.getText()
+			);
 
-			// process header TODO separate it from decryption and load on file selected
-			HeaderInfo info = Utils.parseHeader(header);
-			assert info.algorithm.equals("Twofish");
-			decryptionRecipients.addAll(info.users);
+			decryptionProgressBar.progressProperty().unbind();
+			decryptionProgressBar.setProgress(0);
+			decryptionProgressBar.progressProperty().bind(decryptionTask.progressProperty());
+			decryptButton.setText("Przerwij");
+			decryptionTask.runningProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					if (oldValue == true && newValue == false) { // if it was running, but stopped
+						decryptButton.setText("Deszyfruj");
+						decryptionProgressBar.progressProperty().unbind();
+						decryptionProgressBar.setProgress(0);
+					}
+				}
+			});
 
-			// decrypt
-			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + info.users.get(0).name, passwordField.getText());
-					// TODO see if key name above is OK
-			byte[] decryptedData = Utils.decrypt(encryptedData, info.users.get(0).encryptedKey, privkey,
-					info.cipherMode, info.subblockSize, info.iv);
-
-			// write decrypted
-			Files.deleteIfExists(Paths.get(whereToSaveDecryptedFileTextField.getText()));
-			Path decryptedFile = Files.createFile(Paths.get(whereToSaveDecryptedFileTextField.getText()));
-			if (decryptedFile != null && decryptedData != null) {
-				Files.write(decryptedFile, decryptedData);
-			} else {
-				(new Alert(Alert.AlertType.WARNING, "Cannot decrypt file.")).show();
-			}
-		} catch (IOException e) {
-			(new Alert(Alert.AlertType.WARNING, "Cannot read file.")).show();
-		} catch (ParserConfigurationException e) {
-			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
-		} catch (SAXException e) {
-			(new Alert(Alert.AlertType.WARNING, "XML SAX exception.")).show();
-		} catch (ArrayIndexOutOfBoundsException|IllegalArgumentException e) {
-			(new Alert(Alert.AlertType.WARNING, "File seems to be broken. Did you choose the correct file?")).show();
+			new Thread(decryptionTask).start(); // TODO do we need a handle to this?
 		}
 	}
 
@@ -293,9 +293,32 @@ public class Controller implements Initializable{
 			if (file != null) {
 				String path = file.getCanonicalPath();
 				textField.setText(path);
+
+				if (button.equals(selectFileToDecryptButton)) {
+					// display recipients from file header
+					try {
+						// we need to clear the recipients list because we want to always show recipients for the file
+						// currently shown in a selectFileToDecrypt TextField (if file is correct -> has recipients)
+						decryptionRecipients.clear();
+
+						HeaderInfo info = Utils.parseHeader(Utils.readHeaderBytesFromFile(path));
+						assert info.algorithm.equals("Twofish") : "Algorithm in file header has to be Twofish.";
+
+						decryptionRecipients.addAll(info.users);
+						showRecipientsListView.getSelectionModel().selectFirst(); // to always have something selected
+
+						decryptionHeaderInfo = info; // save this as global so we can use it later
+					} catch (SAXException | NumberFormatException e) {
+						(new Alert(Alert.AlertType.WARNING, "Chosen file's header seems corrupted.")).show();
+					} catch (IOException e) {
+						(new Alert(Alert.AlertType.WARNING, "Can't process this file. Did you choose a correct " +
+								"encrypted file that you have permissions to?")).show();
+					}
+				}
 			}
 		} catch (IOException e) {
 			(new Alert(Alert.AlertType.WARNING, "Cannot read or save chosen file.")).show();
+			e.printStackTrace();
 		}
 	}
 
@@ -307,7 +330,7 @@ public class Controller implements Initializable{
 
 		// Enable multiple selection in ListViews
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		//showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		// Set items for cipher operation mode ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));

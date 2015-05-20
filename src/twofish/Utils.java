@@ -4,6 +4,7 @@ package twofish;
  * Created by Grzegorz on 2015-04-19.
  */
 
+import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
@@ -164,33 +165,68 @@ public class Utils {
 		return file;
 	}
 
-	public static byte[] decrypt(byte[] encryptedData, byte[] encryptedSessionKey, RSAPrivateKey privkey,
-	                             CipherMode mode, int subblockSize, byte[] iv) {
-		byte[] decrypted = null;
+	/// Creates a task that decrypts the given file using given parameters.
+	public static Task createDecryptTask(User user, HeaderInfo info, String privKeyPassword, String inputFilepath,
+	                                     String outputFilepath) {
 		try {
+			CipherMode mode = info.cipherMode; // for shorter code
+
+			// read private key
+			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + user.name, privKeyPassword);
+
 			// decrypt session key
-			SecretKey sessionKey = null;
 			Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
 			rsa.init(Cipher.DECRYPT_MODE, privkey);
-			byte[] key = rsa.doFinal(encryptedSessionKey);
-			sessionKey = new SecretKeySpec(key, "Twofish");
+			byte[] key = rsa.doFinal(user.encryptedKey);
+			SecretKey  sessionKey = new SecretKeySpec(key, "Twofish");
 
 			// prepare cipher
 			Cipher cipher;
 			if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
 				cipher = Cipher.getInstance("Twofish/" + mode.toString() +
-						String.valueOf(subblockSize) + "/PKCS7Padding");
+						String.valueOf(info.subblockSize) + "/PKCS7Padding");
 			} else {
 				cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS7Padding");
 			}
 			if (mode == CipherMode.ECB) {
 				cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
 			} else {
-				cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv));
+				cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(info.iv));
 			}
 
-			// decrypt
-			decrypted = cipher.doFinal(encryptedData);
+			return new Task() {
+				@Override
+				protected Object call() throws Exception {
+					File inputFile = new File(inputFilepath);
+					long filesize = inputFile.length();
+
+					try (InputStream inputStream = Files.newInputStream(Paths.get(inputFilepath));
+					     CipherOutputStream decryptionStream = new CipherOutputStream(
+							     Files.newOutputStream(Paths.get(outputFilepath)),
+							     cipher)
+					){
+						// skip the header so that only the raw data is left in the stream
+						byte[] headerSizeBytes = new byte[4];
+						if (inputStream.read(headerSizeBytes) != 4) // we can't even read the size, quit
+							throw new IOException("Couldn't read header size from file.");
+						int headerSize = Utils.byteArrayToInt(headerSizeBytes);
+						if (inputStream.skip(headerSize) != headerSize) // we didn't skip the whole header
+							throw new IOException("Couldn't skip header while decrypting a file.");
+
+						byte[] buffer = new byte[100000]; // 100 kB
+						long numBytesProcessed = 0;
+						int numBytesRead;
+						while ((numBytesRead = inputStream.read(buffer)) >= 0) {
+							decryptionStream.write(buffer, 0, numBytesRead);
+							numBytesProcessed += numBytesRead;
+							updateProgress(numBytesProcessed, filesize);
+						}
+					}
+
+					updateProgress(0, 0); // TODO do we need it?
+					return null; // TODO return something else?
+				}
+			};
 
 		} catch (IllegalBlockSizeException e) {
 			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
@@ -199,24 +235,32 @@ public class Utils {
 		} catch (BadPaddingException e) {
 			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING,
-					"Twofish algorithm is not supported, install BouncyCastle.");
+			(new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.")).show();
 		} catch (NoSuchPaddingException e) {
 			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (InvalidAlgorithmParameterException e) {
 			(new Alert(Alert.AlertType.WARNING, "Invalid algorithm parameter (probably IV).")).show();
+		} catch (IOException e) {
+			(new Alert(Alert.AlertType.WARNING, "Cannot read file.")).show();
 		}
 
-		return decrypted;
+		// we should never get here
+		assert true : "Check the control flow in createDecryptTask()!";
+		return null;
 	}
 
-	public static HeaderInfo parseHeader(byte[] header) throws ParserConfigurationException, IOException, SAXException,
-			NumberFormatException {
+	public static HeaderInfo parseHeader(byte[] header) throws IOException, SAXException, NumberFormatException {
 		HeaderInfo parsedInfo = new HeaderInfo();
 		parsedInfo.users = new ArrayList<>();
 
 		// parse XML
-		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		DocumentBuilder db;
+		try {
+			db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		} catch (ParserConfigurationException e) {
+			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
+			return parsedInfo;
+		}
 		Document doc = db.parse(new ByteArrayInputStream(header));
 		// see http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
 		doc.getDocumentElement().normalize();
@@ -265,7 +309,7 @@ public class Utils {
 	}
 
 	public static void generateRSAKeypair(String pubFilename, String privFilename, String password) {
-		KeyPairGenerator generator = null;
+		KeyPairGenerator generator;
 
 		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename))) ) {
 			// set up generator
@@ -394,4 +438,23 @@ public class Utils {
 
 		return ByteBuffer.wrap(array).getInt(); // Big endian by default.
 	}
+
+	public static byte[] readHeaderBytesFromFile(String filepath) throws IOException {
+		try (BufferedInputStream fileStream = new BufferedInputStream(Files.newInputStream(Paths.get(filepath)))) {
+			// read header size
+			byte[] headerSizeBytes = new byte[4];
+			if (fileStream.read(headerSizeBytes) != 4) // we can't even read the size, quit
+				throw new IOException("Couldn't read header size from file.");
+			int headerSize = Utils.byteArrayToInt(headerSizeBytes);
+
+			// read header bytes
+			byte[] header = new byte[headerSize];
+			if (fileStream.read(header) != headerSize) // we can't read the header, quit
+				throw new IOException("Couldn't read header from file.");
+
+			return header;
+		}
+	}
+
+
 }
