@@ -164,7 +164,15 @@ public class Utils {
 		return file;
 	}
 
-	/// Creates a task that decrypts the given file using given parameters.
+	/**
+	 * Creates a task that decrypts the given file using given parameters. The task updates its progress.
+	 * @param user User containing a name and encrypted session key - the recipient.
+	 * @param info HeaderInfo with cipher mode of operation, and maybe an IV or subblock size.
+	 * @param privKeyPassword Password used for private key encryption.
+	 * @param inputFilepath Path of file to be decrypted.
+	 * @param outputFilepath Path where the newly decrypted file will be saved.
+	 * @return A task that will decrypt the given file using given parameters.
+	 */
 	public static Task createDecryptTask(User user, HeaderInfo info, String privKeyPassword, String inputFilepath,
 	                                     String outputFilepath) {
 		try {
@@ -222,7 +230,6 @@ public class Utils {
 						}
 					}
 
-					updateProgress(0, 0); // TODO do we need it?
 					return null; // TODO return something else?
 				}
 			};
@@ -230,7 +237,7 @@ public class Utils {
 		} catch (IllegalBlockSizeException e) {
 			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
 		} catch (InvalidKeyException e) {
-			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show(); // TODO is this OK?
+			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show(); // TODO FIX THIS!!!
 		} catch (BadPaddingException e) {
 			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
 		} catch (NoSuchAlgorithmException e) {
@@ -243,7 +250,7 @@ public class Utils {
 			(new Alert(Alert.AlertType.WARNING, "Cannot read file.")).show();
 		}
 
-		// we should never get here
+		// we should never get there
 		assert true : "Check the control flow in createDecryptTask()!";
 		return null;
 	}
@@ -402,7 +409,7 @@ public class Utils {
 			e.printStackTrace(); // TODO THIS LIKELY MEANS PASSWORD GIVEN WAS BAD. WHAT TO DO?
 		}
 
-		// we should never get here
+		// we should never get there
 		assert true : "Check the control flow in loadPrivateKey()!";
 		return null;
 	}

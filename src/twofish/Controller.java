@@ -328,9 +328,8 @@ public class Controller implements Initializable{
 		editRecipientsListView.setItems(encryptionRecipients);
 		showRecipientsListView.setItems(decryptionRecipients);
 
-		// Enable multiple selection in ListViews
+		// Enable multiple selection in recipients ListView on encryption tab
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		//showRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		// Set items for cipher operation mode ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));
