@@ -82,6 +82,8 @@ public class Controller implements Initializable{
 	@FXML
 	private PasswordField passwordField;
 	@FXML
+	private TextField passwordTextField;
+	@FXML
 	private Button showPasswordButton;
 	@FXML
 	private ProgressBar decryptionProgressBar;
@@ -322,6 +324,17 @@ public class Controller implements Initializable{
 		}
 	}
 
+	@FXML
+	void switchPasswordVisibility() {
+		if (passwordField.visibleProperty().getValue()) {    // if password not visible
+			passwordField.visibleProperty().setValue(false); // make it visible
+			showPasswordButton.setText("Ukryj hasło");
+		} else {                                             // if password visible
+			passwordField.visibleProperty().setValue(true);  // hide it
+			showPasswordButton.setText("Pokaż hasło");
+		}
+	}
+
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
 		// Set lists for the ListViews
@@ -330,6 +343,14 @@ public class Controller implements Initializable{
 
 		// Enable multiple selection in recipients ListView on encryption tab
 		editRecipientsListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+		// Make it so that password fields (masked and normal) can be swapped easily
+		passwordField.managedProperty().bind(passwordField.visibleProperty()); // don't take space if not visible
+		passwordTextField.managedProperty().bind(passwordTextField.visibleProperty()); // don't take space if not visible
+		passwordTextField.visibleProperty().bind(passwordField.visibleProperty().not()); // text field visibility is the
+		                                                                  // opposite of the password field's visibility
+		passwordField.textProperty().bindBidirectional(passwordTextField.textProperty()); // sync the text
+
 
 		// Set items for cipher operation mode ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));

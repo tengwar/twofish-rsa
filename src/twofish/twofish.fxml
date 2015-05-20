@@ -223,7 +223,12 @@
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
                                     </PasswordField>
-                                    <Button fx:id="showPasswordButton" mnemonicParsing="false" text="Pokaż hasło">
+                                    <TextField fx:id="passwordTextField" visible="false" HBox.hgrow="ALWAYS">
+                                       <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </HBox.margin>
+                                    </TextField>
+                                    <Button fx:id="showPasswordButton" mnemonicParsing="false" onAction="#switchPasswordVisibility" text="Pokaż hasło">
                                        <HBox.margin>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </HBox.margin>
