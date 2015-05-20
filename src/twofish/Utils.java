@@ -150,8 +150,7 @@ public class Utils {
 		} catch (InvalidKeyException e) {
 			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show();
 		} catch (NoSuchAlgorithmException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING,
-					"Twofish algorithm is not supported, install BouncyCastle.");
+			(new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.")).show();
 		} catch (NoSuchPaddingException e) {
 			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (BadPaddingException e) {
@@ -344,11 +343,11 @@ public class Utils {
 		} catch (NoSuchProviderException e) {
 			(new Alert(Alert.AlertType.WARNING, "Bouncy Castle provider not found. Install Bouncy Castle.")).show();
 		} catch (FileNotFoundException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename +
-					"\" not found.");
+			(new Alert(Alert.AlertType.WARNING, "File \"" + pubFilename + "\" or \"" + privFilename +
+					"\" not found.")).show();
 		} catch (IOException e) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" +
-					privFilename + "\" file.");
+			(new Alert(Alert.AlertType.WARNING, "Can't write the \"" + pubFilename + "\" or \"" +
+					privFilename + "\" file.")).show();
 		} catch (NoSuchPaddingException e) {
 			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
 		} catch (BadPaddingException e) {
