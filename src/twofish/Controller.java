@@ -31,9 +31,6 @@ public class Controller implements Initializable{
 	ObservableList<User> encryptionRecipients = FXCollections.observableArrayList();
 	ObservableList<User> decryptionRecipients = FXCollections.observableArrayList();
 
-	// Will be assigned to when user selects a file to decrypt.
-	HeaderInfo decryptionHeaderInfo = null;
-
 	// Tasks that will run in background
 	Task decryptionTask;
 	Task encryptionTask;
@@ -143,8 +140,7 @@ public class Controller implements Initializable{
 		} else {
 			// prepare decryption task to be run in a new thread
 			decryptionTask = Utils.createDecryptTask(
-					showRecipientsListView.getSelectionModel().getSelectedItem(),
-					decryptionHeaderInfo,
+					showRecipientsListView.getSelectionModel().getSelectedItem().name,
 					passwordField.getText(),
 					selectFileToDecryptTextField.getText(),
 					whereToSaveDecryptedFileTextField.getText()
@@ -161,6 +157,10 @@ public class Controller implements Initializable{
 						decryptButton.setText("Deszyfruj");
 						decryptionProgressBar.progressProperty().unbind();
 						decryptionProgressBar.setProgress(0);
+
+						if (decryptionTask.getException() != null) {
+							(new Alert(Alert.AlertType.WARNING, decryptionTask.getException().getLocalizedMessage())).show();
+						}
 					}
 				}
 			});
@@ -308,8 +308,6 @@ public class Controller implements Initializable{
 
 						decryptionRecipients.addAll(info.users);
 						showRecipientsListView.getSelectionModel().selectFirst(); // to always have something selected
-
-						decryptionHeaderInfo = info; // save this as global so we can use it later
 					} catch (SAXException | NumberFormatException e) {
 						(new Alert(Alert.AlertType.WARNING, "Chosen file's header seems corrupted.")).show();
 					} catch (IOException e) {

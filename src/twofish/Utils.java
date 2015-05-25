@@ -173,53 +173,67 @@ public class Utils {
 	 * @param outputFilepath Path where the newly decrypted file will be saved.
 	 * @return A task that will decrypt the given file using given parameters.
 	 */
-	public static Task createDecryptTask(User user, HeaderInfo info, String privKeyPassword, String inputFilepath,
-	                                     String outputFilepath) {
-		try {
-			CipherMode mode = info.cipherMode; // for shorter code
+	public static Task createDecryptTask(final String username, final String privKeyPassword, final String inputFilepath,
+	                                     final String outputFilepath) {
+		return new Task() {
+			@Override
+			protected Object call() throws Exception {
+				// get file length in bytes
+				File inputFile = new File(inputFilepath);
+				long filesize = inputFile.length();
 
-			// read private key
-			RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + user.name, privKeyPassword);
+				try (InputStream inputStream = Files.newInputStream(Paths.get(inputFilepath));
+				     OutputStream outputStream = Files.newOutputStream(Paths.get(outputFilepath))) {
+					// read header size
+					byte[] headerSizeBytes = new byte[4];
+					if (inputStream.read(headerSizeBytes) != 4) // we can't even read the size, quit
+						throw new IOException("Couldn't read header size from file.");
+					int headerSize = Utils.byteArrayToInt(headerSizeBytes);
 
-			// decrypt session key
-			Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
-			rsa.init(Cipher.DECRYPT_MODE, privkey);
-			byte[] key = rsa.doFinal(user.encryptedKey);
-			SecretKey  sessionKey = new SecretKeySpec(key, "Twofish");
+					// read header bytes
+					byte[] headerBytes = new byte[headerSize];
+					if (inputStream.read(headerBytes) != headerSize) // we can't read the header, quit
+						throw new IOException("Couldn't read header from file.");
 
-			// prepare cipher
-			Cipher cipher;
-			if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
-				cipher = Cipher.getInstance("Twofish/" + mode.toString() +
-						String.valueOf(info.subblockSize) + "/PKCS7Padding");
-			} else {
-				cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS7Padding");
-			}
-			if (mode == CipherMode.ECB) {
-				cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
-			} else {
-				cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(info.iv));
-			}
+					// parse header
+					HeaderInfo info = parseHeader(headerBytes);
+					CipherMode mode = info.cipherMode; // little helper for shorter code
 
-			return new Task() {
-				@Override
-				protected Object call() throws Exception {
-					File inputFile = new File(inputFilepath);
-					long filesize = inputFile.length();
+					// find user on the list
+					User user = null;
+					for (User u : info.users) {
+						if (u.name.equals(username))
+							user = u;
+					}
+					if (user == null) {// user not found on the list, abort
+						throw new IllegalArgumentException("Selected user not found in file.");
+					}
 
-					try (InputStream inputStream = Files.newInputStream(Paths.get(inputFilepath));
-					     CipherOutputStream decryptionStream = new CipherOutputStream(
-							     Files.newOutputStream(Paths.get(outputFilepath)),
-							     cipher)
-					){
-						// skip the header so that only the raw data is left in the stream
-						byte[] headerSizeBytes = new byte[4];
-						if (inputStream.read(headerSizeBytes) != 4) // we can't even read the size, quit
-							throw new IOException("Couldn't read header size from file.");
-						int headerSize = Utils.byteArrayToInt(headerSizeBytes);
-						if (inputStream.skip(headerSize) != headerSize) // we didn't skip the whole header
-							throw new IOException("Couldn't skip header while decrypting a file.");
+					// read private key
+					RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + user.name, privKeyPassword);
 
+					// decrypt session key
+					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+					rsa.init(Cipher.DECRYPT_MODE, privkey);
+					byte[] key = rsa.doFinal(user.encryptedKey);
+					SecretKey  sessionKey = new SecretKeySpec(key, "Twofish");
+
+					// prepare cipher
+					Cipher cipher;
+					if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
+						cipher = Cipher.getInstance("Twofish/" + mode.toString() +
+								String.valueOf(info.subblockSize) + "/PKCS7Padding");
+					} else {
+						cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS7Padding");
+					}
+					if (mode == CipherMode.ECB) {
+						cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
+					} else {
+						cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(info.iv));
+					}
+
+					// do the real decryption
+					try (CipherOutputStream decryptionStream = new CipherOutputStream(outputStream, cipher)) {
 						byte[] buffer = new byte[100000]; // 100 kB
 						long numBytesProcessed = 0;
 						int numBytesRead;
@@ -230,29 +244,11 @@ public class Utils {
 						}
 					}
 
-					return null; // TODO return something else?
 				}
-			};
 
-		} catch (IllegalBlockSizeException e) {
-			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
-		} catch (InvalidKeyException e) {
-			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show(); // TODO FIX THIS!!!
-		} catch (BadPaddingException e) {
-			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
-		} catch (NoSuchAlgorithmException e) {
-			(new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.")).show();
-		} catch (NoSuchPaddingException e) {
-			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
-		} catch (InvalidAlgorithmParameterException e) {
-			(new Alert(Alert.AlertType.WARNING, "Invalid algorithm parameter (probably IV).")).show();
-		} catch (IOException e) {
-			(new Alert(Alert.AlertType.WARNING, "Cannot read file.")).show();
-		}
-
-		// we should never get there
-		assert true : "Check the control flow in createDecryptTask()!";
-		return null;
+				return null; // TODO return something else?
+			}
+		};
 	}
 
 	public static HeaderInfo parseHeader(byte[] header) throws IOException, SAXException, NumberFormatException {
