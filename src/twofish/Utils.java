@@ -220,21 +220,36 @@ public class Utils {
 					}
 
 					// read private key
-					RSAPrivateKey privkey = Utils.loadPrivateKey("klucze" + File.separator + user.name, privKeyPassword);
+					RSAPrivateKey privkey = loadPrivateKey("klucze" + File.separator + user.name, privKeyPassword);
+					SecretKey sessionKey;
+					String padding;
+					if (privkey == null) {
+						// This means we have to pretend that the key is OK, see the long comment in loadPrivateKey()
+						// generate a fake key
+						KeyGenerator generator = KeyGenerator.getInstance("Twofish");
+						generator.init(info.keysize);
+						sessionKey = generator.generateKey();
 
-					// decrypt session key
-					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
-					rsa.init(Cipher.DECRYPT_MODE, privkey);
-					byte[] key = rsa.doFinal(user.encryptedKey);
-					SecretKey  sessionKey = new SecretKeySpec(key, "Twofish");
+						// to prevent padding errors while decrypting the file
+						padding = "NoPadding";
+					} else {
+						// decrypt session key
+						Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+						rsa.init(Cipher.DECRYPT_MODE, privkey);
+						byte[] key = rsa.doFinal(user.encryptedKey);
+						sessionKey = new SecretKeySpec(key, "Twofish");
+
+						// use a normal padding
+						padding = "PKCS7Padding";
+					}
 
 					// prepare cipher
 					Cipher cipher;
 					if (mode == CipherMode.CFB || mode == CipherMode.OFB) {
 						cipher = Cipher.getInstance("Twofish/" + mode.toString() +
-								String.valueOf(info.subblockSize) + "/PKCS7Padding");
+								String.valueOf(info.subblockSize) + "/" + padding);
 					} else {
-						cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/PKCS7Padding");
+						cipher = Cipher.getInstance("Twofish/" + mode.toString() + "/" + padding);
 					}
 					if (mode == CipherMode.ECB) {
 						cipher.init(Cipher.DECRYPT_MODE, sessionKey); // ECB doesn't use an IV
@@ -412,7 +427,15 @@ public class Utils {
 			// Either BC or policy file is not installed, user's Java is stupid or there is a bug here or in key generating.
 			(new Alert(Alert.AlertType.WARNING, "There was a problem loading the private key. Install Bouncy Castle and policy files. Exception: " + e.getClass().getSimpleName())).show();
 		} catch (BadPaddingException e) {
-			e.printStackTrace(); // TODO THIS LIKELY MEANS PASSWORD GIVEN WAS BAD. WHAT TO DO?
+			// This means the password used to decrypt the private key was incorrect. We know that, because padding is
+			// damaged and any attacker who can write his own app will know it too. And we _have_ to use padding because
+			// the private key doesn't necessarily have a length that is a multiple of 128 (Twofish's block size).
+			// But to deceive low-skilled attackers we can pretend that it did decrypt correctly and proceed to decrypt
+			// the whole file with incorrect private key so they can only notice the password was wrong when whole file
+			// is decrypted. This is of course security by obscurity, but we are required to make it like this to pass
+			// the course.
+
+			return null; // special value that means that key wasn't decrypted correctly
 		}
 
 		// we should never get there
