@@ -16,12 +16,6 @@ import org.xml.sax.SAXException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -56,10 +50,10 @@ public class Controller implements Initializable{
 	private ChoiceBox subblockLengthChoiceBox;
 	@FXML
 	private ListView<User> editRecipientsListView;
-	@FXML
-	private Button addRecipientButton;
-	@FXML
-	private Button removeRecipientButton;
+//	@FXML
+//	private Button addRecipientButton;
+//	@FXML
+//	private Button removeRecipientButton;
 	@FXML
 	private ProgressBar encryptionProgressBar;
 	@FXML
@@ -210,11 +204,11 @@ public class Controller implements Initializable{
 			chooser.setInitialDirectory(new File("klucze"));
 			chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Public key", "*.pub"));
 
-			// show chooser and process chosen files TODO find better way to get usernames; this is too hacky
+			// show chooser and process chosen files
 			List<File> files = chooser.showOpenMultipleDialog(stage);
 			if (files != null) {
 				for (File file : files) {
-					// get the username
+					// get the username (this is hacky but we are supposed to do that)
 					String name = file.getName();
 					StringBuilder sb = new StringBuilder(name);
 					sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
