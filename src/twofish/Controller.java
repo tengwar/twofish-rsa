@@ -228,15 +228,13 @@ public class Controller implements Initializable{
 					// add user to the list
 					User user = new User(sb.toString());
 					user.pubkey = Utils.loadPublicKey(file.getCanonicalPath());
-					encryptionRecipients.add(user);
+					if (user.pubkey == null) {
+						(new Alert(Alert.AlertType.WARNING, "Cannot read the public key: " + name)).show();
+					} else {
+						encryptionRecipients.add(user);
+					}
 				}
 			}
-		} catch (NoSuchAlgorithmException e) {
-			(new Alert(Alert.AlertType.WARNING, "RSA algorithm is not supported, install BouncyCastle.")).show();
-		} catch (InvalidKeySpecException e) {
-			(new Alert(Alert.AlertType.WARNING, "Invalid X.509 KeySpec exception.")).show();
-		} catch (NoSuchProviderException e) {
-			(new Alert(Alert.AlertType.WARNING, "Install Bouncy Castle.")).show();
 		} catch (IOException e) {
 			(new Alert(Alert.AlertType.WARNING, "Cannot read the public key.")).show();
 		}

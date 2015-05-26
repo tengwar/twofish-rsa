@@ -25,6 +25,7 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,9 +33,7 @@ import java.nio.file.Paths;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -336,17 +335,17 @@ public class Utils {
 	}
 
 	public static void generateRSAKeypair(String pubFilename, String privFilename, String password) {
-		KeyPairGenerator generator;
-
-		try ( PemWriter pubWriter = new PemWriter(new OutputStreamWriter(new FileOutputStream(pubFilename))) ) {
+		try {
 			// set up generator
-			generator = KeyPairGenerator.getInstance("RSA", "BC");
+			KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA", "BC");
 			generator.initialize(2048);
 
 			// generate keys
 			KeyPair keyPair = generator.generateKeyPair();
 			RSAPrivateKey priv = (RSAPrivateKey) keyPair.getPrivate();
 			RSAPublicKey pub = (RSAPublicKey) keyPair.getPublic();
+			byte[] encodedPrivKey = encodeKey(priv.getModulus(), priv.getPrivateExponent());
+			byte[] encodedPubKey = encodeKey(pub.getModulus(), pub.getPublicExponent());
 
 			// encrypt the private key
 			MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
@@ -354,16 +353,22 @@ public class Utils {
 			SecretKey key = new SecretKeySpec(hash, "Twofish"); // use the hash as encryption key, not password
 			Cipher cipher = Cipher.getInstance("Twofish/ECB/PKCS7Padding");
 			cipher.init(Cipher.ENCRYPT_MODE, key);
-			byte[] encryptedPrivKey = cipher.doFinal(priv.getEncoded());
+			byte[] encryptedPrivKey = cipher.doFinal(encodedPrivKey);
 
 			// write the keys
-			pubWriter.writeObject(new PemObject("RSA PUBLIC KEY", pub.getEncoded()));
 			Files.deleteIfExists(Paths.get(privFilename));
 			Path encryptedFile = Files.createFile(Paths.get(privFilename));
 			if (encryptedFile != null && encryptedPrivKey != null) {
 				Files.write(encryptedFile, encryptedPrivKey);
 			} else {
 				(new Alert(Alert.AlertType.WARNING, "Cannot save the private key.")).show();
+			}
+			Files.deleteIfExists(Paths.get(pubFilename));
+			Path pubFile = Files.createFile(Paths.get(pubFilename));
+			if (pubFile != null && encodedPubKey != null) {
+				Files.write(pubFile, encodedPubKey);
+			} else {
+				(new Alert(Alert.AlertType.WARNING, "Cannot save the public key.")).show();
 			}
 
 		} catch (NoSuchAlgorithmException e) {
@@ -384,19 +389,36 @@ public class Utils {
 			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
 		} catch (InvalidKeyException e) {
 			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show();
+		} catch (ParserConfigurationException|TransformerException e) {
+			(new Alert(Alert.AlertType.WARNING, "There was an issue with manipulating the XML inside the keys. " +
+					"Generation failed.")).show();
 		}
 	}
 
-	public static RSAPublicKey loadPublicKey(String filename) throws IOException, NoSuchProviderException,
-			NoSuchAlgorithmException, InvalidKeySpecException {
-		PemReader reader = new PemReader(new FileReader(filename));
-		PemObject obj = reader.readPemObject();
-		byte[] data = obj.getContent();
+	public static RSAPublicKey loadPublicKey(String filename) throws IOException {
+		try {
+			// get bytes from file
+			Path encryptedFilePath = Paths.get(filename);
+			byte[] data = Files.readAllBytes(encryptedFilePath);
 
-		X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(data);
-		KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+			// get modulus and exponent
+			BigInteger[] pair = decodeKey(data);
 
-		return (RSAPublicKey) factory.generatePublic(pubKeySpec);
+			// prepare key factory
+			RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(pair[0], pair[1]);
+			KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+
+			// finally get the key itself
+			return (RSAPublicKey) factory.generatePublic(pubKeySpec);
+		} catch (NoSuchAlgorithmException|NoSuchProviderException|InvalidKeySpecException e) {
+			// Either BC or policy file is not installed, user's Java is stupid or there is a bug here or in key generating.
+			(new Alert(Alert.AlertType.WARNING, "There was a problem loading the private key. Install Bouncy Castle " +
+					"and policy files. Exception: " + e.getClass().getSimpleName())).show();
+		} catch (ParserConfigurationException|SAXException e) {
+			(new Alert(Alert.AlertType.WARNING, "There were XML issues in private key.")).show();
+		}
+
+		return null;
 	}
 
 	public static RSAPrivateKey loadPrivateKey(String filename, String password) throws IOException {
@@ -416,8 +438,11 @@ public class Utils {
 			cipher.init(Cipher.DECRYPT_MODE, key);
 			byte[] decryptedFile = cipher.doFinal(encryptedFile);
 
+			// get modulus and exponent
+			BigInteger[] pair = decodeKey(decryptedFile);
+
 			// prepare key factory
-			PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(decryptedFile);
+			RSAPrivateKeySpec privKeySpec = new RSAPrivateKeySpec(pair[0], pair[1]);
 			KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
 
 			// finally get the key itself
@@ -425,7 +450,10 @@ public class Utils {
 		} catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|IllegalBlockSizeException|
 				InvalidKeySpecException|InvalidKeyException e) {
 			// Either BC or policy file is not installed, user's Java is stupid or there is a bug here or in key generating.
-			(new Alert(Alert.AlertType.WARNING, "There was a problem loading the private key. Install Bouncy Castle and policy files. Exception: " + e.getClass().getSimpleName())).show();
+			(new Alert(Alert.AlertType.WARNING, "There was a problem loading the private key. Install Bouncy Castle " +
+					"and policy files. Exception: " + e.getClass().getSimpleName())).show();
+		} catch (ParserConfigurationException|SAXException e) {
+			(new Alert(Alert.AlertType.WARNING, "There were XML issues in private key.")).show();
 		} catch (BadPaddingException e) {
 			// This means the password used to decrypt the private key was incorrect. We know that, because padding is
 			// damaged and any attacker who can write his own app will know it too. And we _have_ to use padding because
@@ -435,12 +463,59 @@ public class Utils {
 			// is decrypted. This is of course security by obscurity, but we are required to make it like this to pass
 			// the course.
 
-			return null; // special value that means that key wasn't decrypted correctly
+			return null; // null means that key wasn't decrypted correctly (we also return it for other exceptions)
 		}
 
-		// we should never get there
-		assert true : "Check the control flow in loadPrivateKey()!";
 		return null;
+	}
+
+	public static byte[] encodeKey(BigInteger modulus, BigInteger exponent) throws ParserConfigurationException,
+			TransformerException {
+		// create XML document
+		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		Document doc = db.newDocument();
+
+		// root node
+		Element root = doc.createElement("RSAKey");
+		doc.appendChild(root);
+
+		// modulus node
+		Element modulusNode = doc.createElement("Modulus");
+		modulusNode.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(modulus.toByteArray())));
+		root.appendChild(modulusNode);
+
+		// exponent node
+		Element exponentNode = doc.createElement("Exponent");
+		exponentNode.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(exponent.toByteArray())));
+		root.appendChild(exponentNode);
+
+		// transform DOM -> XML -> byte array
+		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		transformer.setOutputProperty(OutputKeys.INDENT, "yes");                            // use indentation
+		transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");    // indent with 4 spaces
+		ByteArrayOutputStream xmlBaos = new ByteArrayOutputStream();
+		transformer.transform(new DOMSource(doc), new StreamResult(xmlBaos));
+		return xmlBaos.toByteArray();
+	}
+
+	public static BigInteger[] decodeKey(byte[] encodedKey) throws ParserConfigurationException, IOException, SAXException {
+		BigInteger[] pair = new BigInteger[2];
+
+		// parse XML
+		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		Document doc = db.parse(new ByteArrayInputStream(encodedKey));
+		// see http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
+		doc.getDocumentElement().normalize();
+
+		// get modulus
+		String modulus = doc.getElementsByTagName("Modulus").item(0).getFirstChild().getNodeValue();
+		pair[0] = new BigInteger(Base64.getDecoder().decode(modulus));
+
+		// get exponent
+		String exponent = doc.getElementsByTagName("Exponent").item(0).getFirstChild().getNodeValue();
+		pair[1] = new BigInteger(Base64.getDecoder().decode(exponent));
+
+		return pair;
 	}
 
 	public static List<Integer> getPossibleSubblockSizes() {
