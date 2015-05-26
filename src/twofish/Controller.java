@@ -214,13 +214,21 @@ public class Controller implements Initializable{
 			List<File> files = chooser.showOpenMultipleDialog(stage);
 			if (files != null) {
 				for (File file : files) {
+					// get the username
 					String name = file.getName();
 					StringBuilder sb = new StringBuilder(name);
 					sb.replace(name.lastIndexOf(".pub"), name.lastIndexOf(".pub") + 4, "");
+
+					// check if user isn't duplicated
+					for (User u : encryptionRecipients) {
+						if (u.name.equals(sb.toString()))
+							return; // user with this name already on the list, abort
+					}
+
+					// add user to the list
 					User user = new User(sb.toString());
 					user.pubkey = Utils.loadPublicKey(file.getCanonicalPath());
-					if (!encryptionRecipients.contains(user))
-						encryptionRecipients.add(user);
+					encryptionRecipients.add(user);
 				}
 			}
 		} catch (NoSuchAlgorithmException e) {
