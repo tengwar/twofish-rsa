@@ -444,7 +444,8 @@ public class Utils {
 	}
 
 	public static byte[] readHeaderBytesFromFile(String filepath) throws IOException {
-		try (BufferedInputStream fileStream = new BufferedInputStream(Files.newInputStream(Paths.get(filepath)))) {
+		try (InputStream inputStream = Files.newInputStream(Paths.get(filepath));
+		     BufferedInputStream fileStream = new BufferedInputStream(inputStream)) {
 			// read header size
 			byte[] headerSizeBytes = new byte[4];
 			if (fileStream.read(headerSizeBytes) != 4) // we can't even read the size, quit
