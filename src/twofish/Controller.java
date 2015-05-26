@@ -350,7 +350,6 @@ public class Controller implements Initializable{
 			}
 		} catch (IOException e) {
 			(new Alert(Alert.AlertType.WARNING, "Cannot read or save chosen file.")).show();
-			e.printStackTrace();
 		}
 	}
 

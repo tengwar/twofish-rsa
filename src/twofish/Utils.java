@@ -551,6 +551,8 @@ public class Utils {
 			int headerSize = Utils.byteArrayToInt(headerSizeBytes);
 
 			// read header bytes
+			if (headerSize <= 0 || headerSize > 10000000) // <= 0B or > 10MB
+				throw new IOException("Couldn't read header from file; wrong header size.");
 			byte[] header = new byte[headerSize];
 			if (fileStream.read(header) != headerSize) // we can't read the header, quit
 				throw new IOException("Couldn't read header from file.");
