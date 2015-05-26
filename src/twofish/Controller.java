@@ -391,7 +391,7 @@ public class Controller implements Initializable{
 			@Override
 			public void changed(ObservableValue observable, Object oldValue, Object newValue) {
 				int keysize = (int) newValue;
-				ObservableList<Integer> sizes = FXCollections.observableArrayList(Utils.getPossibleSubblockSizes(keysize));
+				ObservableList<Integer> sizes = FXCollections.observableArrayList(Utils.getPossibleSubblockSizes());
 				subblockLengthChoiceBox.setItems(sizes);
 
 				// TODO perhaps manually preserve selected item if it's still valid?

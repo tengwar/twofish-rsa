@@ -420,10 +420,10 @@ public class Utils {
 		return null;
 	}
 
-	public static List<Integer> getPossibleSubblockSizes(int keysize) {
+	public static List<Integer> getPossibleSubblockSizes() {
 		List<Integer> sizes = new ArrayList<>();
 
-		for (int i = 8; i <= keysize; i+=8) {
+		for (int i = 8; i <= 128; i+=8) { // Twofish has a block size of 128 bits
 			sizes.add(i);
 		}
 
