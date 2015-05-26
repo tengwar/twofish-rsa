@@ -103,7 +103,12 @@ public class Controller implements Initializable{
 			encryptionProgressBar.progressProperty().unbind();
 			encryptionProgressBar.setProgress(0);
 		} else {
-			// TODO alert if user needs to give more info
+			// alert if user needs to give more info
+			if (selectFileToEncryptTextField.getText().isEmpty() ||
+					whereToSaveEncryptedFileTextField.getText().isEmpty()) {
+				(new Alert(Alert.AlertType.WARNING, "Please select both input and output files.")).show();
+				return;
+			}
 			if (encryptionRecipients.size() <= 0) {
 				(new Alert(Alert.AlertType.WARNING, "Add a recipient first.")).show();
 				return;
@@ -158,6 +163,14 @@ public class Controller implements Initializable{
 			decryptionProgressBar.progressProperty().unbind();
 			decryptionProgressBar.setProgress(0);
 		} else {
+			// alert if user needs to give more info
+			if (selectFileToDecryptTextField.getText().isEmpty() ||
+					whereToSaveDecryptedFileTextField.getText().isEmpty() ||
+					showRecipientsListView.getSelectionModel().isEmpty()) {
+				(new Alert(Alert.AlertType.WARNING, "Please select both input and output files.")).show();
+				return;
+			}
+
 			// prepare decryption task to be run in a new thread
 			decryptionTask = Utils.createDecryptTask(
 					showRecipientsListView.getSelectionModel().getSelectedItem().name,
