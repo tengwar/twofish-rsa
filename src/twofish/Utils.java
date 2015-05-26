@@ -266,6 +266,8 @@ public class Utils {
 						}
 					}
 
+				} catch (IOException e) {
+					 throw new IOException("Can't read the file: " + e.getLocalizedMessage(), e);
 				}
 
 				return null; // TODO return something else?
