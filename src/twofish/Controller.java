@@ -95,16 +95,21 @@ public class Controller implements Initializable{
 
 	@FXML
 	void encrypt() {
-		try {
+		if (encryptionTask != null && encryptionTask.isRunning()) {
+			// cancel the encryption task
+			encryptionTask.cancel(true);
+
+			encryptButton.setText("Szyfruj");
+			encryptionProgressBar.progressProperty().unbind();
+			encryptionProgressBar.setProgress(0);
+		} else {
+			// TODO alert if user needs to give more info
 			if (encryptionRecipients.size() <= 0) {
 				(new Alert(Alert.AlertType.WARNING, "Add a recipient first.")).show();
 				return;
 			}
-			// read plain
-			Path plainFile = Paths.get(selectFileToEncryptTextField.getText());
-			byte[] plainData = Files.readAllBytes(plainFile);
 
-			// encrypt
+			// prepare the HeaderInfo
 			HeaderInfo info = new HeaderInfo();
 			info.cipherMode = (CipherMode) (operationModeChoiceBox.getSelectionModel().getSelectedItem());
 			info.users = encryptionRecipients;
@@ -112,19 +117,34 @@ public class Controller implements Initializable{
 			info.keysize = (int) keyLengthChoiceBox.getSelectionModel().getSelectedItem();
 			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB)
 				info.subblockSize = (Integer) subblockLengthChoiceBox.getSelectionModel().getSelectedItem();
-			byte[] encryptedData = Utils.encrypt(plainData, info);
 
-			// write encrypted
-			Files.deleteIfExists(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			Path encryptedFile = Files.createFile(Paths.get(whereToSaveEncryptedFileTextField.getText()));
-			if (encryptedFile != null && encryptedData != null) {
-				Files.write(encryptedFile, encryptedData);
-			} else {
-				(new Alert(Alert.AlertType.WARNING, "Cannot encrypt or write file.")).show();
-			}
+			// prepare encryption task to be run in a new thread
+			encryptionTask = Utils.createEncryptTask(
+					info,
+					selectFileToEncryptTextField.getText(),
+					whereToSaveEncryptedFileTextField.getText()
+			);
 
-		} catch (IOException e) {
-			(new Alert(Alert.AlertType.WARNING, "Cannot write file.")).show();
+			// prepare the UI, the task, the bindings, etc.
+			encryptionProgressBar.progressProperty().unbind();
+			encryptionProgressBar.setProgress(0);
+			encryptionProgressBar.progressProperty().bind(encryptionTask.progressProperty());
+			encryptButton.setText("Przerwij");
+			encryptionTask.runningProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					if (oldValue == true && newValue == false) { // if it was running, but stopped
+						encryptButton.setText("Szyfruj");
+						encryptionProgressBar.progressProperty().unbind();
+						encryptionProgressBar.setProgress(0);
+
+						if (encryptionTask != null && encryptionTask.getException() != null)
+							(new Alert(Alert.AlertType.WARNING, encryptionTask.getException().getLocalizedMessage())).show();
+					}
+				}
+			});
+
+			new Thread(encryptionTask).start(); // TODO do we need a handle to this?
 		}
 	}
 
@@ -158,9 +178,8 @@ public class Controller implements Initializable{
 						decryptionProgressBar.progressProperty().unbind();
 						decryptionProgressBar.setProgress(0);
 
-						if (decryptionTask.getException() != null) {
+						if (decryptionTask != null && decryptionTask.getException() != null)
 							(new Alert(Alert.AlertType.WARNING, decryptionTask.getException().getLocalizedMessage())).show();
-						}
 					}
 				}
 			});

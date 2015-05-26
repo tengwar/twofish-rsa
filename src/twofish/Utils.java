@@ -40,134 +40,144 @@ import java.util.Base64;
 import java.util.List;
 
 public class Utils {
-	public static byte[] encrypt(byte[] data, HeaderInfo info) {
-		byte[] file = null;
+	public static Task createEncryptTask(final HeaderInfo info, final String inputFilepath, final String outputFilepath) {
 
-		try {
-			// generate key
-			SecretKey sessionKey = generateKey(info.keysize);
+		return new Task() {
+			@Override
+			protected Object call() throws Exception {
+				// generate key
+				try {
+					KeyGenerator generator = KeyGenerator.getInstance("Twofish");
+					generator.init(info.keysize);
+					SecretKey sessionKey = generator.generateKey();
 
-			// prepare cipher
-			Cipher cipher;
-			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
-				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() +
-						String.valueOf(info.subblockSize) + "/PKCS7Padding");
-			} else {
-				cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() + "/PKCS7Padding");
+					// prepare cipher
+					Cipher cipher;
+					if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
+						cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() +
+								String.valueOf(info.subblockSize) + "/PKCS7Padding");
+					} else {
+						cipher = Cipher.getInstance("Twofish/" + info.cipherMode.toString() + "/PKCS7Padding");
+					}
+					cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+
+					// create XML document
+					DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+					Document doc = db.newDocument();
+
+					// root node
+					Element root = doc.createElement("EncryptedFileHeader");
+					doc.appendChild(root);
+
+					// algorithm node
+					Element algorithm = doc.createElement("Algorithm");
+					algorithm.appendChild(doc.createTextNode(info.algorithm));
+					root.appendChild(algorithm);
+
+					// key size node
+					Element keysize = doc.createElement("KeySize");
+					// We could get size from HeaderInfo, but to always get the real value even if code changes we do this:
+					keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
+					root.appendChild(keysize);
+
+					// subblock size
+					if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
+						assert info.subblockSize != 0;
+						Element subblockSizeNode = doc.createElement("SegmentSize");
+						subblockSizeNode.appendChild(doc.createTextNode(String.valueOf(info.subblockSize)));
+						root.appendChild(subblockSizeNode);
+					}
+
+					// cipher mode node
+					Element modeNode = doc.createElement("CipherMode");
+					modeNode.appendChild(doc.createTextNode(info.cipherMode.toString()));
+					root.appendChild(modeNode);
+
+					// IV node
+					if (cipher.getIV() != null) { // getIV() returns null if cipher does not use an IV
+						// (or if it isn't set yet, but it was set automatically by cipher.init())
+						Element ivNode = doc.createElement("IV");
+						ivNode.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(cipher.getIV())));
+						root.appendChild(ivNode);
+					}
+
+					// users node
+					Element usersNode = doc.createElement("ApprovedUsers");
+					root.appendChild(usersNode);
+
+					// add users
+					for (User user : info.users) {
+						// encrypt session key
+						Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
+						rsa.init(Cipher.ENCRYPT_MODE, user.pubkey);
+						byte[] key = rsa.doFinal(sessionKey.getEncoded());
+
+						// create the User XML node
+						Element userNode = doc.createElement("User");
+						usersNode.appendChild(userNode);
+						Element nameNode = doc.createElement("Name");
+						nameNode.appendChild(doc.createTextNode(user.name));
+						userNode.appendChild(nameNode);
+						Element encryptedKeyNode = doc.createElement("SessionKey");
+						encryptedKeyNode.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(key)));
+						userNode.appendChild(encryptedKeyNode);
+					}
+
+					// transform DOM -> XML -> byte array
+					Transformer transformer = TransformerFactory.newInstance().newTransformer();
+					transformer.setOutputProperty(OutputKeys.INDENT, "yes");                            // use indentation
+					transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");    // indent with 4 spaces
+					DOMSource source = new DOMSource(doc);
+					ByteArrayOutputStream xmlBaos = new ByteArrayOutputStream();
+					StreamResult result = new StreamResult(xmlBaos);
+					// Output to console for testing
+					//StreamResult result = new StreamResult(System.out);
+					// Output to file
+					//StreamResult result = new StreamResult(new File(filePath));
+					transformer.transform(source, result);
+					byte[] xmlBytes = xmlBaos.toByteArray();
+
+					// write the bytes to file
+					try (InputStream inputStream = Files.newInputStream(Paths.get(inputFilepath));
+					     OutputStream outputStream = Files.newOutputStream(Paths.get(outputFilepath));
+					     CipherOutputStream encryptionStream = new CipherOutputStream(outputStream, cipher)) {
+						outputStream.write(intToByteArray(xmlBytes.length));
+						outputStream.write(xmlBytes);
+
+						// calculate the file length (used for updating the progress property)
+						File inputFile = new File(inputFilepath);
+						long outputFileSize = inputFile.length();
+
+						byte[] buffer = new byte[100000]; // 100 kB
+						long numBytesProcessed = 0;
+						int numBytesRead;
+						while ((numBytesRead = inputStream.read(buffer)) >= 0) {
+							encryptionStream.write(buffer, 0, numBytesRead);
+							numBytesProcessed += numBytesRead;
+							updateProgress(numBytesProcessed, outputFileSize);
+						}
+					}
+				} catch (NoSuchAlgorithmException|NoSuchPaddingException e) {
+					throw new NoSuchAlgorithmException("This program wasn't installed properly. It needs the " +
+							"bcprov-something.jar file.", e);
+				} catch (IOException e) {
+					throw new IOException("Can't read the source file or write the encrypted file.", e);
+				} catch (IllegalBlockSizeException|BadPaddingException|ParserConfigurationException
+						|TransformerException e) {
+					throw new InternalError("Libraries used threw an exception that they were not supposed" +
+							"to throw. This shouldn't happen and is beyond author's control.", e);
+				} catch (InvalidKeyException e) {
+					throw new InvalidKeyException("User's public key (or generated session key) might be broken.", e);
+				}
+
+				return null; // TODO return something else?
 			}
-			cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
-
-			// encrypt
-			byte[] encrypted = cipher.doFinal(data);
-
-			// create XML document
-			DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			Document doc = db.newDocument();
-
-			// root node
-			Element root = doc.createElement("EncryptedFileHeader");
-			doc.appendChild(root);
-
-			// algorithm node
-			Element algorithm = doc.createElement("Algorithm");
-			algorithm.appendChild(doc.createTextNode(info.algorithm));
-			root.appendChild(algorithm);
-
-			// key size node
-			Element keysize = doc.createElement("KeySize");
-			// We could get size from HeaderInfo, but to always get the real value even if code changes we do this:
-			keysize.appendChild(doc.createTextNode(String.valueOf(sessionKey.getEncoded().length * 8)));
-			root.appendChild(keysize);
-
-			// subblock size
-			if (info.cipherMode == CipherMode.CFB || info.cipherMode == CipherMode.OFB) {
-				assert info.subblockSize != 0;
-				Element subblockSizeNode = doc.createElement("SegmentSize");
-				subblockSizeNode.appendChild(doc.createTextNode(String.valueOf(info.subblockSize)));
-				root.appendChild(subblockSizeNode);
-			}
-
-			// cipher mode node
-			Element modeNode = doc.createElement("CipherMode");
-			modeNode.appendChild(doc.createTextNode(info.cipherMode.toString()));
-			root.appendChild(modeNode);
-
-			// IV node
-			if (cipher.getIV() != null) {
-				Element iv = doc.createElement("IV");
-				iv.appendChild(doc.createTextNode(Base64.getEncoder().encodeToString(cipher.getIV())));
-				root.appendChild(iv);
-			}
-
-			// users node
-			Element usersNode = doc.createElement("ApprovedUsers");
-			root.appendChild(usersNode);
-
-			// add users
-			for (User user : info.users) {
-				Element userNode = doc.createElement("User");
-				usersNode.appendChild(userNode);
-				Element nameNode = doc.createElement("Name");
-				nameNode.appendChild(doc.createTextNode(user.name));
-				userNode.appendChild(nameNode);
-					// encrypt session key
-					Cipher rsa = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING");
-					rsa.init(Cipher.ENCRYPT_MODE, user.pubkey);
-					byte[] key = rsa.doFinal(sessionKey.getEncoded());
-				Element encryptedKey = doc.createElement("SessionKey");
-				encryptedKey.appendChild(doc.createTextNode( Base64.getEncoder().encodeToString(key) ));
-				userNode.appendChild(encryptedKey);
-			}
-
-			// write the XML
-			Transformer transformer = TransformerFactory.newInstance().newTransformer();
-			transformer.setOutputProperty(OutputKeys.INDENT, "yes");                            // use indentation
-			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");    // indent with 4 spaces
-			DOMSource source = new DOMSource(doc);
-			ByteArrayOutputStream xmlBaos = new ByteArrayOutputStream();
-			StreamResult result = new StreamResult(xmlBaos);
-			// Output to console for testing
-			//StreamResult result = new StreamResult(System.out);
-			// Output to file
-			//StreamResult result = new StreamResult(new File(filePath));
-			transformer.transform(source, result);
-
-			byte[] xmlBytes = xmlBaos.toByteArray();
-
-			ByteArrayOutputStream fileBaos = new ByteArrayOutputStream();
-
-			fileBaos.write(intToByteArray(xmlBytes.length));    // write the XML size (int is 4 bytes in Java)
-			fileBaos.write(xmlBytes);                           // write the XML itself
-			fileBaos.write(encrypted);                          // write the encrypted data
-			file = fileBaos.toByteArray();
-
-		} catch (ParserConfigurationException e) {
-			(new Alert(Alert.AlertType.WARNING, "XML parser configuration exception.")).show();
-		} catch (TransformerConfigurationException e) {
-			(new Alert(Alert.AlertType.WARNING, "XML transformer configuration exception.")).show();
-		} catch (TransformerException e) {
-			(new Alert(Alert.AlertType.WARNING, "XML transformer exception.")).show();
-		} catch (InvalidKeyException e) {
-			(new Alert(Alert.AlertType.WARNING, "Twofish encryption key is invalid.")).show();
-		} catch (NoSuchAlgorithmException e) {
-			(new Alert(Alert.AlertType.WARNING, "Twofish algorithm is not supported, install BouncyCastle.")).show();
-		} catch (NoSuchPaddingException e) {
-			(new Alert(Alert.AlertType.WARNING, "Selected padding is not supported.")).show();
-		} catch (BadPaddingException e) {
-			(new Alert(Alert.AlertType.WARNING, "Padding is wrong.")).show();
-		} catch (IllegalBlockSizeException e) {
-			(new Alert(Alert.AlertType.WARNING, "That block size is not supported.")).show();
-		} catch (IOException e) {
-			(new Alert(Alert.AlertType.WARNING, "ByteArrayOutputStream IO exception. Shouldn't happen.")).show();
-		}
-
-		return file;
+		};
 	}
 
 	/**
 	 * Creates a task that decrypts the given file using given parameters. The task updates its progress.
-	 * @param user User containing a name and encrypted session key - the recipient.
-	 * @param info HeaderInfo with cipher mode of operation, and maybe an IV or subblock size.
+	 * @param username Name of recipient whose private key will be used to decrypt the session key.
 	 * @param privKeyPassword Password used for private key encryption.
 	 * @param inputFilepath Path of file to be decrypted.
 	 * @param outputFilepath Path where the newly decrypted file will be saved.
@@ -418,14 +428,6 @@ public class Utils {
 		}
 
 		return sizes;
-	}
-
-	public static SecretKey generateKey(int keysize) throws NoSuchAlgorithmException {
-		KeyGenerator generator = KeyGenerator.getInstance("Twofish");
-
-		generator.init(keysize);
-
-		return generator.generateKey();
 	}
 
 	public static byte[] intToByteArray(int i) {
