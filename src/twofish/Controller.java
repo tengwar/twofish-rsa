@@ -33,6 +33,8 @@ public class Controller implements Initializable{
 	// so we get it from Main.start(...) trough Controller.setStage(...) method seen somewhere below
 	private Stage stage;
 
+	@FXML
+	private MenuBar menuBar;
 	// encryption tab widgets
 	@FXML
 	private TextField selectFileToEncryptTextField;
@@ -380,6 +382,8 @@ public class Controller implements Initializable{
 		                                                                  // opposite of the password field's visibility
 		passwordField.textProperty().bindBidirectional(passwordTextField.textProperty()); // sync the text
 
+		// Hide the menu bar
+		menuBar.managedProperty().bind(menuBar.visibleProperty());
 
 		// Set items for cipher operation mode ChoiceBox
 		operationModeChoiceBox.setItems(FXCollections.observableArrayList(CipherMode.values()));
